@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lista de Compras do Mes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --green:#2F5233; --green-light:#D9E8D4; --bg:#F7F8F5; --card:#FFFFFF;
+    --text:#22301E; --muted:#6b7566; --accent:#C97B2E; --border:#E1E5DC;
+    --red:#A63D40; --blue:#3E6B8A;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    background:var(--bg); color:var(--text); margin:0; padding:0 0 120px 0;
+  }
+  header{
+    background:var(--green); color:#fff; padding:20px 24px 0;
+    position:sticky; top:0; z-index:5;
+  }
+  header h1{margin:0 0 4px; font-size:1.3rem;}
+  header p{margin:0; font-size:0.85rem; opacity:0.85;}
+  .titulo-mes{
+    margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
+  }
+  .titulo-mes input{
+    font-size:0.9rem; padding:6px 10px; border-radius:6px; border:none;
+    background:rgba(255,255,255,0.15); color:#fff;
+  }
+  .titulo-mes input::placeholder{color:rgba(255,255,255,0.7);}
+
+  /* ---- abas ---- */
+  .abas{display:flex; gap:4px; margin-top:14px;}
+  .aba{
+    background:transparent; border:none; color:rgba(255,255,255,0.7);
+    padding:10px 16px; font-size:0.9rem; font-family:inherit; cursor:pointer;
+    border-bottom:3px solid transparent; border-radius:6px 6px 0 0;
+  }
+  .aba:hover{color:#fff; background:rgba(255,255,255,0.08);}
+  .aba.ativa{color:#fff; border-bottom-color:var(--accent); font-weight:600;}
+
+  .toolbar{
+    display:flex; gap:10px; padding:14px 24px; background:#fff; border-bottom:1px solid var(--border);
+    position:sticky; top:130px; z-index:4; flex-wrap:wrap; align-items:center;
+  }
+  .toolbar input[type=text]{
+    flex:1; min-width:160px; padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:0.9rem;
+  }
+  .btn{
+    border:1px solid var(--border); background:#fff; color:var(--text); padding:8px 14px;
+    border-radius:8px; font-size:0.85rem; cursor:pointer; white-space:nowrap; font-family:inherit;
+  }
+  .btn:hover{background:var(--green-light);}
+  .btn:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+  .btn.primary{background:var(--green); color:#fff; border-color:var(--green);}
+  .btn.primary:hover{background:#25401f;}
+  .btn.accent{background:var(--accent); color:#fff; border-color:var(--accent);}
+  .btn.accent:hover{background:#b06a24;}
+  .btn.danger{color:var(--red); border-color:#e8cfd0;}
+  .btn.danger:hover{background:#fbeff0;}
+  main{padding:10px 24px;}
+  .categoria{
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    margin:14px 0; overflow:hidden;
+  }
+  .cat-header{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 16px; background:var(--green-light); cursor:pointer; user-select:none;
+  }
+  .cat-header .cat-title{font-weight:600; color:var(--green); font-size:0.95rem;}
+  .cat-header .cat-meta{font-size:0.78rem; color:var(--muted);}
+  .cat-toggle-all{font-size:0.75rem; color:var(--green); text-decoration:underline; cursor:pointer; margin-left:10px;}
+  .cat-body{padding:4px 8px;}
+  .item-row{
+    display:flex; align-items:center; gap:10px; padding:9px 8px; border-bottom:1px solid #F0F1EC; font-size:0.88rem;
+  }
+  .item-row:last-child{border-bottom:none;}
+  .item-row input[type=checkbox]{width:18px; height:18px; accent-color:var(--green); cursor:pointer; flex-shrink:0;}
+  .item-desc{flex:1; min-width:0;}
+  .item-desc .padrao{display:block; font-size:0.72rem; color:var(--muted);}
+  .tag-barato{
+    display:inline-block; margin-top:4px; font-size:0.7rem; font-weight:600;
+    background:#EAF3EA; color:#2f5233; border:1px solid #cfe3cf;
+    border-radius:20px; padding:1px 9px; line-height:1.5;
+  }
+  .qtd-box{display:flex; align-items:center; gap:4px; flex-shrink:0;}
+  .qtd-box button{
+    width:24px; height:24px; border:1px solid var(--border); background:#fff; border-radius:5px; cursor:pointer; font-size:0.9rem; line-height:1;
+  }
+  .qtd-box input{width:42px; text-align:center; border:1px solid var(--border); border-radius:5px; padding:3px; font-size:0.85rem;}
+  .un-label{font-size:0.72rem; color:var(--muted); width:24px;}
+  .preco-label{font-size:0.78rem; color:var(--muted); width:66px; text-align:right; flex-shrink:0;}
+  .remover-item{font-size:0.72rem; color:var(--red); cursor:pointer; text-decoration:underline; flex-shrink:0;}
+  .hidden{display:none !important;}
+  .novo-item-card .cat-header{cursor:default; background:#EFE7DA;}
+  .novo-item-form{
+    padding:14px 16px; display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;
+  }
+  .campo{display:flex; flex-direction:column; gap:4px; font-size:0.75rem; color:var(--muted);}
+  .campo input, .campo select{
+    padding:7px 9px; border:1px solid var(--border); border-radius:7px; font-size:0.88rem; font-family:inherit;
+  }
+  .campo.produto{flex:2; min-width:200px;}
+  .campo.qtd{width:70px;}
+  .campo.un{width:70px;}
+  .campo.preco{width:100px;}
+  .campo.cat{min-width:160px;}
+  footer{
+    position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--border);
+    padding:12px 24px; display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
+    box-shadow:0 -4px 14px rgba(0,0,0,0.06); z-index:6;
+  }
+  .resumo{font-size:0.88rem;}
+  .resumo b{color:var(--green); font-size:1.05rem;}
+  .footer-actions{display:flex; gap:8px; flex-wrap:wrap;}
+
+  /* ---- painel ---- */
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:12px; margin:14px 0;}
+  .kpi{
+    background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 16px;
+  }
+  .kpi .rotulo{font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em;}
+  .kpi .valor{font-size:1.45rem; font-weight:600; color:var(--green); margin-top:6px; line-height:1.15;}
+  .kpi .nota{font-size:0.74rem; color:var(--muted); margin-top:4px;}
+  .kpi .nota.sobe{color:var(--red);}
+  .kpi .nota.desce{color:#3f7a4a;}
+
+  .painel{
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    margin:14px 0; padding:16px;
+  }
+  .painel h2{
+    margin:0 0 4px; font-size:0.95rem; color:var(--green);
+  }
+  .painel .sub{margin:0 0 14px; font-size:0.78rem; color:var(--muted);}
+
+  .barra-linha{margin-bottom:10px;}
+  .barra-topo{display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:0.82rem; margin-bottom:4px;}
+  .barra-topo .nome{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .barra-topo .val{color:var(--muted); font-size:0.78rem; white-space:nowrap; flex-shrink:0;}
+  .barra-trilho{background:#F0F1EC; border-radius:4px; height:9px; overflow:hidden;}
+  .barra-preenche{height:100%; border-radius:4px;}
+
+  .legenda{display:flex; flex-wrap:wrap; gap:10px 16px; margin-top:12px; font-size:0.75rem; color:var(--muted);}
+  .legenda span{display:flex; align-items:center; gap:5px;}
+  .legenda i{width:10px; height:10px; border-radius:2px; display:inline-block;}
+
+  .vazio{
+    text-align:center; padding:28px 16px; color:var(--muted); font-size:0.85rem; line-height:1.6;
+  }
+  .vazio b{display:block; color:var(--text); font-size:0.9rem; margin-bottom:6px;}
+
+  table.hist{width:100%; border-collapse:collapse; font-size:0.84rem;}
+  table.hist th{
+    text-align:left; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em;
+    color:var(--muted); font-weight:600; padding:8px 6px; border-bottom:1px solid var(--border);
+  }
+  table.hist td{padding:9px 6px; border-bottom:1px solid #F0F1EC;}
+  table.hist td.num{text-align:right; white-space:nowrap;}
+  table.hist tr:last-child td{border-bottom:none;}
+  .dif-sobe{color:var(--red);}
+  .dif-desce{color:#3f7a4a;}
+
+  /* preco editavel na lista */
+  .preco-box{display:flex; align-items:center; gap:3px; flex-shrink:0;}
+  .preco-box .cifra{font-size:0.72rem; color:var(--muted);}
+  .preco-box input{
+    width:66px; text-align:right; border:1px solid var(--border); border-radius:5px;
+    padding:3px 5px; font-size:0.8rem; font-family:inherit; color:var(--text);
+  }
+
+  /* comparativo de mercados */
+  .podio{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px;}
+  .podio-card{border:1px solid var(--border); border-radius:10px; padding:12px 14px; position:relative;}
+  .podio-card.melhor{border-color:#3f7a4a; background:#F1F7F1;}
+  .podio-card.pior{border-color:#e8cfd0; background:#FBF3F3;}
+  .podio-card .tag{font-size:0.68rem; text-transform:uppercase; letter-spacing:0.05em; font-weight:600;}
+  .podio-card.melhor .tag{color:#3f7a4a;}
+  .podio-card.pior .tag{color:var(--red);}
+  .podio-card .nome{font-size:0.95rem; font-weight:600; margin:4px 0 2px; color:var(--text);}
+  .podio-card .val{font-size:1.25rem; font-weight:600; color:var(--green);}
+  .podio-card .sub{font-size:0.72rem; color:var(--muted); margin-top:2px;}
+
+  table.comparativo{width:100%; border-collapse:collapse; font-size:0.82rem;}
+  table.comparativo th{
+    text-align:right; font-size:0.72rem; color:var(--muted); font-weight:600;
+    padding:8px 8px; border-bottom:2px solid var(--border); white-space:nowrap;
+  }
+  table.comparativo th:first-child{text-align:left;}
+  table.comparativo td{padding:8px 8px; border-bottom:1px solid #F0F1EC; text-align:right; white-space:nowrap;}
+  table.comparativo td:first-child{text-align:left; color:var(--text);}
+  table.comparativo td.barato{background:#EAF3EA; color:#2f5233; font-weight:600; border-radius:4px;}
+  table.comparativo tr.total-row td{border-top:2px solid var(--border); border-bottom:none; font-weight:600; padding-top:10px;}
+  table.comparativo tr.total-row td:first-child{color:var(--green);}
+  .tabela-rolagem{overflow-x:auto; -webkit-overflow-scrolling:touch;}
+
+  /* comparacao justa */
+  .justa-card{border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:10px; border-left-width:4px;}
+  .justa-card.melhor{border-left-color:#3f7a4a; background:#F4F9F4;}
+  .justa-card.pior{border-left-color:var(--red); background:#FDF6F6;}
+  .justa-topo{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .justa-topo b{font-size:1rem; color:var(--text);}
+  .justa-topo .comum{font-size:0.75rem; color:var(--muted);}
+  .justa-linha{font-size:0.88rem; color:var(--text); margin:8px 0 6px; line-height:1.5;}
+  .justa-veredito{font-size:0.9rem; font-weight:600;}
+  .justa-veredito.bom{color:#3f7a4a;}
+  .justa-veredito.ruim{color:var(--red);}
+  .justa-nota{font-size:0.74rem; color:var(--muted); margin-top:6px;}
+
+  /* comparador */
+  .comp-lista{display:flex; flex-direction:column; gap:10px; margin-top:14px;}
+  .comp-item{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px 14px;}
+  .comp-topo{display:flex; justify-content:space-between; align-items:baseline; gap:10px;}
+  .comp-nome{font-weight:600; font-size:0.92rem; color:var(--text);}
+  .comp-cat{display:inline-block; font-size:0.68rem; color:var(--muted); font-weight:500; background:var(--bg); border:1px solid var(--border); border-radius:20px; padding:1px 8px; margin-left:8px; vertical-align:middle;}
+  .merc-chips{display:flex; flex-wrap:wrap; gap:6px; margin:9px 0 8px;}
+  .merc-chip{font-size:0.78rem; color:var(--muted); background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:3px 9px;}
+  .merc-chip b{color:var(--text); font-weight:600;}
+  .merc-chip.melhor{background:#EAF3EA; border-color:#cfe3cf; color:#2f5233;}
+  .merc-chip.melhor b{color:#2f5233;}
+  .merc-chip.pior{background:#FBF3F3; border-color:#e8cfd0; color:#8a3b3d;}
+  .comp-rodape{font-size:0.8rem;}
+  .comp-econ{color:#3f7a4a;}
+  .comp-uni{color:var(--muted);}
+
+  /* cesta otimizada */
+  .otim-destaque{font-size:0.9rem; line-height:1.55; color:var(--text); background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:12px 14px; margin-bottom:14px;}
+  .otim-destaque.ganho{background:#F1F7F1; border-color:#cfe3cf;}
+  .otim-nota{font-size:0.75rem; color:var(--muted); margin-top:6px;}
+  .plano-titulo{font-size:0.82rem; font-weight:600; color:var(--green); margin:14px 0 8px;}
+  .plano-merc{border:1px solid var(--border); border-radius:9px; padding:10px 12px; margin-bottom:8px;}
+  .plano-merc-cab{font-weight:600; font-size:0.86rem; color:var(--text); margin-bottom:6px; display:flex; justify-content:space-between; gap:10px;}
+  .plano-merc-cab span{color:var(--muted); font-weight:500; font-size:0.76rem;}
+  .plano-itens{display:flex; flex-wrap:wrap; gap:5px;}
+  .plano-item{font-size:0.76rem; background:var(--bg); border:1px solid var(--border); border-radius:7px; padding:2px 8px; color:var(--text);}
+  .plano-item i{color:var(--muted); font-style:normal; font-size:0.72rem;}
+
+  /* selos de mercado */
+  .mseloi{display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:5px; vertical-align:baseline;}
+  .merc-chip .mseloi{margin-right:4px;}
+
+  /* detalhe por compra */
+  .compra-card{border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:12px; background:var(--card);}
+  .compra-head{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; flex-wrap:wrap;}
+  .compra-merc{font-size:1.02rem; font-weight:600; color:var(--text);}
+  .compra-data{font-size:0.75rem; color:var(--muted); margin-top:2px;}
+  .compra-total{text-align:right;}
+  .ct-val{font-size:1.3rem; font-weight:700; color:var(--green); line-height:1.1;}
+  .ct-sub{font-size:0.74rem; color:var(--muted); margin-top:2px;}
+  .compra-corpo{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  .col-tit{font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); font-weight:600; margin-bottom:9px;}
+  .top-lista{display:flex; flex-direction:column; gap:4px;}
+  .top-item{display:flex; justify-content:space-between; gap:8px; font-size:0.83rem; padding:4px 0; border-bottom:1px solid #F0F1EC;}
+  .top-item:last-child{border-bottom:none;}
+  .ti-nome i{color:var(--muted); font-style:normal; font-size:0.72rem;}
+  .ti-val{font-weight:600; white-space:nowrap;}
+  .compra-nota{font-size:0.76rem; color:var(--muted); margin-top:10px;}
+  .compra-nota b{color:var(--text);}
+
+  /* composicao empilhada */
+  .stk-row{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .stk-lab{width:130px; font-size:0.83rem; flex-shrink:0;}
+  .stk-bar{flex:1; height:22px; border-radius:6px; overflow:hidden; display:flex; background:#F0F1EC;}
+  .stk-seg{height:100%;}
+  @media (max-width:640px){ .compra-corpo{grid-template-columns:1fr; gap:14px;} .stk-lab{width:96px;} }
+
+  svg.grafico{width:100%; height:auto; display:block;}
+  svg.grafico text{font-family:inherit;}
+
+  /* ---- modal ---- */
+  .modal-bg{
+    position:fixed; inset:0; background:rgba(34,48,30,0.45); z-index:10;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal{
+    background:#fff; border-radius:12px; padding:22px; width:100%; max-width:420px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.2);
+  }
+  .modal h3{margin:0 0 6px; font-size:1.05rem; color:var(--green);}
+  .modal p.ajuda{margin:0 0 16px; font-size:0.82rem; color:var(--muted); line-height:1.5;}
+  .modal label{display:block; font-size:0.75rem; color:var(--muted); margin-bottom:4px;}
+  .modal input{
+    width:100%; padding:9px 11px; border:1px solid var(--border); border-radius:8px;
+    font-size:0.95rem; font-family:inherit; margin-bottom:14px;
+  }
+  .modal-actions{display:flex; gap:8px; justify-content:flex-end;}
+
+  .aviso{
+    background:#FBF3E7; border:1px solid #EBD9BE; color:#7a5a2a;
+    border-radius:8px; padding:10px 12px; font-size:0.78rem; line-height:1.5; margin:14px 0;
+  }
+
+  @media (max-width:640px){
+    header, .toolbar, main, footer{padding-left:14px; padding-right:14px;}
+    .toolbar{top:150px;}
+    .preco-label{display:none;}
+    .item-desc{font-size:0.85rem;}
+    footer{flex-direction:column; align-items:stretch; gap:10px;}
+    .footer-actions{justify-content:stretch;}
+    .footer-actions .btn{flex:1;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important; animation:none !important;}
+  }
+  @media print{
+    header, .toolbar, footer, .cat-header .cat-toggle-all, .novo-item-card, .abas{display:none !important;}
+    body{padding:0;}
+    .categoria{border:none; margin:0;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Lista de Compras do Mes</h1>
+  <p>Baseada na compra padrao do mercado. Marque o que precisa comprar e gere a lista final.</p>
+  <div class="titulo-mes">
+    <input type="text" id="mesRef" placeholder="Ex: Agosto/2026">
+  </div>
+  <div class="abas">
+    <button class="aba ativa" id="aba-lista" onclick="trocarAba('lista')">Lista</button>
+    <button class="aba" id="aba-comparador" onclick="trocarAba('comparador')">Comparador</button>
+    <button class="aba" id="aba-painel" onclick="trocarAba('painel')">Painel</button>
+  </div>
+</header>
+
+<!-- ================= LISTA ================= -->
+<div id="view-lista">
+
+  <div class="toolbar">
+    <input type="text" id="busca" placeholder="Buscar item...">
+    <button class="btn" onclick="marcarTodos(true)">Marcar todos</button>
+    <button class="btn" onclick="marcarTodos(false)">Desmarcar todos</button>
+    <button class="btn" onclick="resetarPadrao()">Restaurar padrao</button>
+  </div>
+
+  <main>
+    <div id="lista"></div>
+
+    <div class="categoria novo-item-card">
+      <div class="cat-header">
+        <span class="cat-title">+ Adicionar produto novo</span>
+      </div>
+      <div class="novo-item-form">
+        <div class="campo produto">
+          <label>Produto</label>
+          <input type="text" id="novoDesc" placeholder="Ex: Papel toalha">
+        </div>
+        <div class="campo cat">
+          <label>Categoria</label>
+          <select id="novoCat"></select>
+        </div>
+        <div class="campo qtd">
+          <label>Qtde</label>
+          <input type="number" id="novoQtd" value="1" min="0" step="0.1">
+        </div>
+        <div class="campo un">
+          <label>Unidade</label>
+          <input type="text" id="novoUn" value="Un">
+        </div>
+        <div class="campo preco">
+          <label>Preco est. (R$)</label>
+          <input type="number" id="novoPreco" value="0" min="0" step="0.01">
+        </div>
+        <button class="btn primary" onclick="adicionarItem()">Adicionar a lista</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ================= COMPARADOR ================= -->
+<div id="view-comparador" class="hidden">
+  <div class="toolbar">
+    <input type="text" id="buscaComp" placeholder="Buscar produto...">
+    <select id="ordemComp" class="btn">
+      <option value="economia">Maior economia</option>
+      <option value="nome">Nome (A-Z)</option>
+      <option value="caro">Mais caro</option>
+      <option value="recente">Comprado recentemente</option>
+    </select>
+    <label class="btn" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+      <input type="checkbox" id="soComparaveis" style="width:16px;height:16px;accent-color:var(--green)">
+      so comparaveis
+    </label>
+  </div>
+  <main>
+    <div id="comparador"></div>
+  </main>
+</div>
+
+<!-- ================= PAINEL ================= -->
+<div id="view-painel" class="hidden">
+  <main>
+    <div id="dash"></div>
+  </main>
+</div>
+
+<footer>
+  <div class="resumo" id="rodape-resumo">
+    <span id="contagem">0 itens selecionados</span> &middot; Total estimado: <b id="totalEstimado">R$ 0,00</b>
+  </div>
+  <div class="footer-actions" id="rodape-acoes">
+    <button class="btn" onclick="baixarTexto()">Baixar .txt</button>
+    <button class="btn" onclick="gerarPDF()">Gerar PDF</button>
+    <button class="btn" onclick="exportarDados()" title="Salvar um backup dos seus dados">Backup</button>
+    <label class="btn" title="Restaurar de um backup" style="cursor:pointer">Importar
+      <input type="file" accept="application/json" onchange="importarDados(this)" style="display:none">
+    </label>
+    <button class="btn accent" onclick="abrirFecharCompra()">Fechar compra</button>
+  </div>
+</footer>
+
+<div id="modal-root"></div>
+
+<script>
+const ITEMS = [{"desc":"Desinfetante Sanol 5L Euc/Hort","cat":"Limpeza","qtd":1,"un":"Gl","preco":13.49,"key":"desinfetante sanol euc hort 5000ml"},{"desc":"Sabao Liquido Omo 1,4L Acao An","cat":"Limpeza","qtd":1,"un":"Un","preco":27.9,"key":"sabao liquido omo acao 1400ml"},{"desc":"Lava Roupa Odd 5L Compacto","cat":"Limpeza","qtd":1,"un":"Un","preco":36.9,"key":"lava roupa odd compacto 5000ml"},{"desc":"Esponja Bombril c/6","cat":"Limpeza","qtd":1,"un":"Un","preco":1.79,"key":"esponja bombril c6"},{"desc":"Saco de Lixo Embalixo Pt Econ 100un","cat":"Limpeza","qtd":1,"un":"Un","preco":13.9,"key":"saco lixo embalixo pt 100un"},{"desc":"Desodorizador Sanitario Pato Gel 38g","cat":"Limpeza","qtd":1,"un":"Un","preco":14.25,"key":"desodorizador sanitario pato gel 38g"},{"desc":"Amaciante Comfort 500ml","cat":"Limpeza","qtd":1,"un":"Fr","preco":9.99,"key":"amaciante comfort 500ml"},{"desc":"Bom Ar 360ml Talco","cat":"Limpeza","qtd":1,"un":"Un","preco":17.9,"key":"bom ar talco 360ml"},{"desc":"Limpador Multiuso Veja 4x500ml","cat":"Limpeza","qtd":1,"un":"Am","preco":15.99,"key":"limpador multiuso veja 500ml"},{"desc":"Detergente Ype 5L Neutro","cat":"Limpeza","qtd":1,"un":"Un","preco":21.9,"key":"detergente 5000ml"},{"desc":"Alcool Nova Era Bact 1L","cat":"Limpeza","qtd":1,"un":"Un","preco":4.99,"key":"alcool 1000ml"},{"desc":"Escova de Lavar Roupa Condor M","cat":"Limpeza","qtd":1,"un":"Un","preco":5.79,"key":"escova lavar roupa condor"},{"desc":"Detergente Ype 500ml Ca Lim","cat":"Limpeza","qtd":2,"un":"Un","preco":2.59,"key":"detergente 500ml"},{"desc":"Esponja Bombril L4 P3","cat":"Limpeza","qtd":1,"un":"Pc","preco":5.59,"key":"esponja bombril l4"},{"desc":"Amaciante Azulim Perfumado 1L Ameixa","cat":"Limpeza","qtd":1,"un":"Un","preco":7.99,"key":"amaciante azulim perfumado ameixa 1000ml"},{"desc":"Saponaceo SBP 380ml Multiuso","cat":"Limpeza","qtd":1,"un":"Un","preco":12.9,"key":"saponaceo sbp multiuso 380ml"},{"desc":"Cif Cremoso 450ml Lar","cat":"Limpeza","qtd":1,"un":"Un","preco":12.9,"key":"cif cremoso lar 450ml"},{"desc":"Limpa Casa L 1LT P900 SE","cat":"Limpeza","qtd":1,"un":"Un","preco":7.99,"key":"limpa casa se 1000ml"},{"desc":"Pano Multiuso Scotch-Brite Rolo c/25","cat":"Limpeza","qtd":1,"un":"Un","preco":29.9,"key":"pano multiuso scotch brite c25"},{"desc":"Sabonete Liquido Palmolive 200ml Nutri","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":7.49,"key":"sabonete liquido palmolive nutri 200ml"},{"desc":"Absorvente Intimus Rende+ c/28","cat":"Higiene Pessoal","qtd":1,"un":"Pc","preco":12.19,"key":"absorvente intimus rende c28"},{"desc":"Escova Dental Soft Black c/2","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":19.9,"key":"escova dental soft black c2"},{"desc":"Antisseptico Listerine Zero 500ml Menta","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":22.49,"key":"antisseptico listerine zero menta 500ml"},{"desc":"Hidratante Nivea 400ml Soft Milk","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":22.9,"key":"hidratante nivea soft milk 400ml"},{"desc":"Toalha Umedecida Huggies Tripla Protecao c/88","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":9.59,"key":"toalha umedecida huggies tripla c88"},{"desc":"Shampoo Palmolive Naturals 350ml","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":10.09,"key":"shampoo palmolive naturals 350ml"},{"desc":"Acucar Refinado Caravelas 1kg","cat":"Mercearia","qtd":3,"un":"Un","preco":2.95,"key":"acucar refinado 1000g"},{"desc":"Feijao Preto Maximo 1kg","cat":"Mercearia","qtd":2,"un":"Pc","preco":6.75,"key":"feijao preto 1000g"},{"desc":"Arroz Tio Joao LF T1 1kg","cat":"Mercearia","qtd":3,"un":"Pc","preco":6.29,"key":"arroz 1000g"},{"desc":"Molho Shoyu Sakura Tradicional 150ml","cat":"Mercearia","qtd":1,"un":"Un","preco":4.8,"key":"molho shoyu sakura tradicional 150ml"},{"desc":"Molho Tare Sakura 180ml","cat":"Mercearia","qtd":1,"un":"Un","preco":8.29,"key":"molho tare sakura 180ml"},{"desc":"Caldo Knorr 57g Carne","cat":"Mercearia","qtd":1,"un":"Un","preco":2.49,"key":"caldo knorr carne 57g"},{"desc":"Pimenta Rei Chinez 10g","cat":"Mercearia","qtd":1,"un":"Pc","preco":2.45,"key":"pimenta rei chinez 10g"},{"desc":"Sal Refinado Lebre 1kg","cat":"Mercearia","qtd":1,"un":"Pc","preco":2.85,"key":"sal 1000g"},{"desc":"Caldo Knorr 114g Galinha","cat":"Mercearia","qtd":1,"un":"Un","preco":4.19,"key":"caldo knorr galinha 114g"},{"desc":"Oleo de Soja Liza Pet 900ml","cat":"Mercearia","qtd":1,"un":"Un","preco":7.19,"key":"oleo de soja 900ml"},{"desc":"Extrato de Tomate Elefante 300g Tradicional","cat":"Mercearia","qtd":1,"un":"Un","preco":7.59,"key":"extrato tomate elefante tradicional 300g"},{"desc":"Vinagre de Alcool Peixe 750ml","cat":"Mercearia","qtd":1,"un":"Un","preco":2.35,"key":"vinagre 750ml"},{"desc":"Azeite Extra Virgem Mondegao 500ml","cat":"Mercearia","qtd":1,"un":"Un","preco":37.69,"key":"azeite extra virgem mondegao 500ml"},{"desc":"Sal Parrilla Chimichurri","cat":"Mercearia","qtd":1,"un":"Un","preco":19.9,"key":"sal"},{"desc":"Milho para Pipoca Predileto 170g","cat":"Mercearia","qtd":2,"un":"Un","preco":3.19,"key":"milho para pipoca predileto 170g"},{"desc":"Milho de Pipoca Kicaldo 400g","cat":"Mercearia","qtd":1,"un":"Un","preco":3.39,"key":"milho pipoca kicaldo 400g"},{"desc":"Macarrao Adria Sem Ovos 400g Penne","cat":"Mercearia","qtd":1,"un":"Un","preco":3.69,"key":"macarrao adria ovos penne 400g"},{"desc":"Macarrao Adria Ninho 500g","cat":"Mercearia","qtd":1,"un":"Pc","preco":5.69,"key":"macarrao adria ninho 500g"},{"desc":"Leite em Po Ninho Integral 380g","cat":"Mercearia","qtd":1,"un":"Un","preco":17.99,"key":"leite em po ninho 380g"},{"desc":"Macarrao Adria 500g Espaguete 8","cat":"Mercearia","qtd":1,"un":"Pc","preco":4.49,"key":"macarrao adria espaguete 500g"},{"desc":"Cafe Pimpinela 250g","cat":"Mercearia","qtd":1,"un":"Un","preco":13.45,"key":"cafe pimpinela 250g"},{"desc":"Biscoito Maizena Piraque 175g","cat":"Mercearia","qtd":1,"un":"Un","preco":3.59,"key":"biscoito maizena piraque 175g"},{"desc":"Maionese Heinz 390g","cat":"Mercearia","qtd":1,"un":"Un","preco":13.35,"key":"maionese heinz 390g"},{"desc":"Catchup Thermer 1kg Tradicional","cat":"Mercearia","qtd":1,"un":"Un","preco":17.9,"key":"catchup thermer tradicional 1000g"},{"desc":"Fermento em Po Royal 100g","cat":"Mercearia","qtd":1,"un":"Un","preco":4.49,"key":"fermento 100g"},{"desc":"Gelatina Royal 25g Morango","cat":"Mercearia","qtd":1,"un":"Un","preco":1.99,"key":"gelatina royal morango 25g"},{"desc":"Gelatina Royal Zero 12g Abacaxi","cat":"Mercearia","qtd":1,"un":"Un","preco":4.85,"key":"gelatina royal zero abacaxi 12g"},{"desc":"Gelatina Royal Zero 12g Uva","cat":"Mercearia","qtd":1,"un":"Un","preco":4.85,"key":"gelatina royal zero uva 12g"},{"desc":"Mostarda Hellmann's Suprema 250g","cat":"Mercearia","qtd":1,"un":"Un","preco":13.89,"key":"mostarda hellmann suprema 250g"},{"desc":"Aveia em Flocos Yoki 170g (pct 2)","cat":"Mercearia","qtd":2,"un":"Un","preco":5.29,"key":"aveia em flocos yoki 170g"},{"desc":"Amido de Milho Maizena 200g","cat":"Mercearia","qtd":1,"un":"Pc","preco":5.99,"key":"amido de milho 200g"},{"desc":"Tapioca Terrinha 500g (pct 2)","cat":"Mercearia","qtd":2,"un":"Pc","preco":6.75,"key":"tapioca 500g"},{"desc":"Farinha de Trigo Rosa Branca 1kg (pct 2)","cat":"Mercearia","qtd":2,"un":"Pc","preco":3.85,"key":"farinha de trigo 1000g"},{"desc":"Ervilha Grafino 500g (pct 2)","cat":"Mercearia","qtd":2,"un":"Un","preco":5.49,"key":"ervilha grafino 500g"},{"desc":"Alho Descascado Congelado 500g (pct 2)","cat":"Mercearia","qtd":2,"un":"Un","preco":9.79,"key":"alho descascado congelado 500g"},{"desc":"Mix de Graos Grano 1kg","cat":"Mercearia","qtd":1,"un":"Un","preco":20.79,"key":"mix graos grano 1000g"},{"desc":"Queijo Parmesao Ralado President 50g","cat":"Laticínios e Frios","qtd":3,"un":"Un","preco":6.19,"key":"queijo parmesao 50g"},{"desc":"Creme de Leite Italac 200g (pct 6)","cat":"Laticínios e Frios","qtd":6,"un":"Un","preco":2.29,"key":"creme de leite 200g"},{"desc":"Leite Condensado Italac 395g (pct 4)","cat":"Laticínios e Frios","qtd":4,"un":"Un","preco":5.49,"key":"leite condensado 395g"},{"desc":"Leite Integral Tirol c/Tampa 1L (pct 3)","cat":"Laticínios e Frios","qtd":3,"un":"Un","preco":5.49,"key":"leite integral 1000ml"},{"desc":"Requeijao Pocos de Caldas 400g Tradicional","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":15.99,"key":"requeijao pocos caldas tradicional 400g"},{"desc":"Manteiga com Sal Presidente 200g","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":12.5,"key":"manteiga sal presidente 200g"},{"desc":"Margarina Qualy 1kg com Sal","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":19.89,"key":"margarina qualy sal 1000g"},{"desc":"Bacon Aurora 250g Fatiado","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":17.9,"key":"bacon aurora fatiado 250g"},{"desc":"Queijo Minas Frescal 1kg Lanche","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":35.9,"key":"queijo 1000g"},{"desc":"Iogurte Natural Nestle 170g (pct 8)","cat":"Laticínios e Frios","qtd":8,"un":"Un","preco":4.19,"key":"iogurte natural nestle 170g"},{"desc":"Iogurte Nestle 170g com Lactase (pct 4)","cat":"Laticínios e Frios","qtd":4,"un":"Un","preco":4.19,"key":"iogurte nestle lactase 170g"},{"desc":"Ovo Branco Grande c/30","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":15.95,"key":"ovo branco grande c30"},{"desc":"Sobrecoxa de Frango Sadia 800g","cat":"Carnes e Aves","qtd":1,"un":"Pc","preco":12.19,"key":"frango 800g"},{"desc":"Peito de Frango Congelado Cancao 1kg","cat":"Carnes e Aves","qtd":1,"un":"Un","preco":16.99,"key":"frango 1000g"},{"desc":"File de Frango Copacol 1kg (pct 2)","cat":"Carnes e Aves","qtd":2,"un":"Pc","preco":15.95,"key":"file de frango 1000g"},{"desc":"Contrafile Friboi (1,366kg)","cat":"Carnes e Aves","qtd":1.366,"un":"Kg","preco":45.9,"key":"contrafile friboi 1366g"},{"desc":"Paleta Bovina Friboi (3,226kg)","cat":"Carnes e Aves","qtd":3.226,"un":"Kg","preco":42.9,"key":"paleta 3226g"},{"desc":"Miolo de Alcatra Friboi (2,090kg)","cat":"Carnes e Aves","qtd":2.09,"un":"Kg","preco":59.9,"key":"alcatra 2090g"},{"desc":"Coxao Mole Bovino Friboi (0,880kg)","cat":"Carnes e Aves","qtd":0.88,"un":"Kg","preco":49.9,"key":"coxao 880g"},{"desc":"Pao Tortilha Integral 270g","cat":"Padaria","qtd":1,"un":"Pc","preco":12.99,"key":"pao tortilha integral 270g"},{"desc":"Pao Nutrimento 500g Frutas","cat":"Padaria","qtd":1,"un":"Un","preco":13.9,"key":"pao nutrimento frutas 500g"},{"desc":"Pao de Queijo Catupiry 390g (pct 3)","cat":"Padaria","qtd":3,"un":"Un","preco":16.49,"key":"queijo 390g"},{"desc":"Coca-Cola Sem Acucar 1,5L","cat":"Bebidas","qtd":6,"un":"Gf","preco":7.19,"key":"acucar 1500ml"},{"desc":"Agua Vitoriosa s/Gas 1,5L","cat":"Bebidas","qtd":6,"un":"Un","preco":1.89,"key":"agua vitoriosa gas 1500ml"},{"desc":"Suco Natural One 1,3L","cat":"Bebidas","qtd":1,"un":"Un","preco":15.89,"key":"suco natural one 1300ml"},{"desc":"Agua com Gas Crystal 1,5L","cat":"Bebidas","qtd":1,"un":"Gf","preco":3.49,"key":"agua com gas 1500ml"},{"desc":"Chocolate Classic 150g Amendoim","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":14.59,"key":"chocolate classic amendoim 150g"},{"desc":"Chocolate Lacta Laka 80g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":9.79,"key":"chocolate lacta laka 80g"},{"desc":"Pipoca de Micro-ondas Yoki 100g Manteiga (pct 3)","cat":"Doces e Snacks","qtd":3,"un":"Un","preco":3.75,"key":"pipoca micro ondas yoki 100g"},{"desc":"Pipoca de Micro-ondas Yoki 100g Cinema","cat":"Doces e Snacks","qtd":2,"un":"Un","preco":3.75,"key":"pipoca micro ondas yoki 100g"},{"desc":"Bala/Bombom Butter Toffees 400g Chocolate","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":22.9,"key":"bala bombom butter toffees 400g"},{"desc":"Bombom Leite Malte Piraque 132g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":3.59,"key":"bombom leite malte piraque 132g"},{"desc":"Amendoim Japones Elma Chips 400g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":19.19,"key":"amendoim japones elma chips 400g"},{"desc":"Wafer Piraque 100g Chocolate (pct 2)","cat":"Doces e Snacks","qtd":2,"un":"Pc","preco":3.15,"key":"wafer piraque chocolate 100g"},{"desc":"Amendoim Descascado Yoki 350g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":12.69,"key":"amendoim descascado yoki 350g"},{"desc":"Biscoito 302,4g ao Leite","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":21.9,"key":"biscoito ao leite 302g"},{"desc":"Wafer Look 55g Chocolate","cat":"Doces e Snacks","qtd":1,"un":"Pc","preco":3.49,"key":"wafer look chocolate 55g"},{"desc":"Biscoito Piraque 160g Chocolate (pct 2)","cat":"Doces e Snacks","qtd":2,"un":"Un","preco":3.59,"key":"biscoito piraque chocolate 160g"},{"desc":"Biscoito Piraque 160g Limao","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":3.59,"key":"biscoito piraque limao 160g"},{"desc":"Batata Palha Elma Chips 360g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":28.99,"key":"batata palha elma chips 360g"},{"desc":"Bombom Ouro Branco 540g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":35.99,"key":"bombom ouro branco 540g"},{"desc":"Biscoito Cream Cracker Richester 350g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":6.59,"key":"biscoito cream cracker richester 350g"},{"desc":"Pacoca Santa Helena 550g","cat":"Doces e Snacks","qtd":1,"un":"Pt","preco":28.5,"key":"pacoca santa helena 550g"},{"desc":"Brocolis Congelado Bom Apetite 1kg","cat":"Congelados","qtd":1,"un":"Un","preco":12.9,"key":"brocolis congelado bom apetite 1000g"},{"desc":"Batata Congelada Chicoria 2kg","cat":"Congelados","qtd":1,"un":"Un","preco":17.7,"key":"batata congelada chicoria 2000g"},{"desc":"Espuma Automotiva Proauto 400ml","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":18.9,"key":"espuma automotiva proauto 400ml"},{"desc":"Inseticida SBP 45N Ap+Refil","cat":"Bazar e Utilidades","qtd":2,"un":"Un","preco":17.9,"key":"inseticida sbp ap refil"},{"desc":"Toalha de Papel Social 50F c/2","cat":"Bazar e Utilidades","qtd":2,"un":"Pc","preco":4.49,"key":"toalha de papel 50f c2"},{"desc":"Papel Aluminio Wyda 30x4mt","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":4.29,"key":"papel aluminio wyda mt"},{"desc":"Papel Higienico Neve Folha Tripla Lv12 Pg11","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":23.19,"key":"papel higienico neve folha l12"},{"desc":"Vela T Reis 130g N6","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":7.9,"key":"vela reis 130g"},{"desc":"Balde Santana 7,5L","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":6.9,"key":"balde santana 7500ml"},{"desc":"Balde Santana 13,8L","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":13.9,"key":"balde santana 13800ml"},{"desc":"Lixeira Agra c/Pedal 15L","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":27.49,"key":"lixeira agra pedal 15000ml"},{"desc":"Saco de Lixo Guapex 75x50 (pct 3)","cat":"Bazar e Utilidades","qtd":3,"un":"Un","preco":7.9,"key":"saco lixo guapex"},{"desc":"Fosforo Parana Gigante c/50","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":2.79,"key":"fosforo parana gigante c50"},{"desc":"Saco de Lixo Dove Rolo 2L c/100","cat":"Bazar e Utilidades","qtd":1,"un":"Pc","preco":12.9,"key":"saco lixo dove rolo 2000ml"},{"desc":"Filtro de Cafe Aroma Max 103un","cat":"Bazar e Utilidades","qtd":1,"un":"Pc","preco":3.89,"key":"filtro cafe aroma max 103un"},{"desc":"Saco Descartavel 10x17,26cm (pct de embalagem)","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":16.99,"key":"saco descartavel cm"},{"desc":"Lampada LED Elgin 12V Branca (pct 3)","cat":"Bazar e Utilidades","qtd":3,"un":"Un","preco":6.9,"key":"lampada led elgin branca"}];
+
+const CATEGORIAS_ORDEM = ["Limpeza","Higiene Pessoal","Mercearia","Laticínios e Frios","Carnes e Aves",
+  "Padaria","Bebidas","Doces e Snacks","Congelados","Bazar e Utilidades","Outros"];
+
+const CORES = {
+  "Limpeza":"#2F5233", "Higiene Pessoal":"#4A7C59", "Mercearia":"#6B8E4E",
+  "Laticínios e Frios":"#C97B2E", "Carnes e Aves":"#A63D40", "Padaria":"#D9A441",
+  "Bebidas":"#3E6B8A", "Doces e Snacks":"#8C5E8C", "Congelados":"#5FA8A0",
+  "Bazar e Utilidades":"#7A6A5A", "Outros":"#9AA396"
+};
+
+/* cores de identidade dos mercados */
+const CORES_MERCADO = { "assai":"#2C6BA0", "guanabara":"#E3AE2B" };
+const _PALETA_MERCADO = ["#7A6A5A","#5FA8A0","#8C5E8C","#A6683D","#4A7C59","#B0555A"];
+function corMercado(nome){
+  const k = _semAcento(String(nome||'')).trim();
+  if(CORES_MERCADO[k]) return CORES_MERCADO[k];
+  let h = 0; for(let i=0;i<k.length;i++) h = (h*31 + k.charCodeAt(i)) >>> 0;
+  return _PALETA_MERCADO[h % _PALETA_MERCADO.length];
+}
+// texto legivel sobre a cor do mercado (amarelo pede texto escuro)
+function corTextoMercado(nome){
+  const c = corMercado(nome);
+  const r=parseInt(c.substr(1,2),16), g=parseInt(c.substr(3,2),16), b=parseInt(c.substr(5,2),16);
+  return (0.299*r + 0.587*g + 0.114*b) > 150 ? '#5c4a12' : '#ffffff';
+}
+// bolinha colorida + nome do mercado
+function selo(nome){
+  return `<span class="mseloi" style="background:${corMercado(nome)}"></span>${esc(nome)}`;
+}
+
+/* ================= ARMAZENAMENTO ================= */
+const CHAVE_ESTADO = 'listaCompras.estado.v1';
+const CHAVE_HIST   = 'listaCompras.historico.v1';
+const CHAVE_MES    = 'listaCompras.mes.v1';
+const CHAVE_SEED   = 'listaCompras.seed';
+
+let armazenamentoOk = true;
+function ler(chave){
+  try { const v = localStorage.getItem(chave); return v ? JSON.parse(v) : null; }
+  catch(e){ armazenamentoOk = false; return null; }
+}
+function gravar(chave, valor){
+  try { localStorage.setItem(chave, JSON.stringify(valor)); }
+  catch(e){ armazenamentoOk = false; }
+}
+
+function salvar(){
+  gravar(CHAVE_ESTADO, state);
+  gravar(CHAVE_HIST, historico);
+  gravar(CHAVE_MES, document.getElementById('mesRef').value);
+}
+
+/* ================= ESTADO ================= */
+const ESTADO_PADRAO = () => ITEMS.map((it, idx) => ({...it, id: idx, checked:false, qtdAtual: it.qtd, custom:false}));
+
+let state = ler(CHAVE_ESTADO) || ESTADO_PADRAO();
+let proximoId = state.reduce((m,i)=> Math.max(m, i.id), -1) + 1;
+let abaAtual = 'lista';
+
+/* ============ COMPRAS JA REGISTRADAS (mantidas no arquivo) ============
+   A lista principal e a compra 1, feita no Assai. Quando entrar uma nova
+   compra (ex.: pela notinha), ela e adicionada aqui e a versao abaixo sobe.  */
+const SEED_VERSAO = 'v4-guanabara';
+
+function compraAssaiInicial(){
+  const itens = ITEMS.map(it => ({desc:it.desc, cat:it.cat, qtd:it.qtd, un:it.un, preco:it.preco, key:it.key}));
+  const estimado = itens.reduce((s,i)=> s + i.qtd*i.preco, 0);
+  const porCategoria = {};
+  itens.forEach(i => { porCategoria[i.cat] = (porCategoria[i.cat]||0) + i.qtd*i.preco; });
+  return {
+    id: 1,
+    mercado: 'Assaí',
+    mes: 'Julho/2026',
+    data: '2026-07-04T12:00:00.000Z',
+    estimado,
+    real: estimado,          // esses precos sao os da compra real no Assai
+    nItens: itens.length,
+    porCategoria,
+    itens
+  };
+}
+
+const COMPRA_MUNDIAL = {"id":2,"mercado":"Guanabara","mes":"Agosto/2026","data":"2026-08-08T11:14:21.000Z","estimado":1376.07,"real":1376.08,"nItens":75,"porCategoria":{"Mercearia":194.91,"Doces e Snacks":97.46,"Laticínios e Frios":84.66,"Bazar e Utilidades":50.56,"Higiene Pessoal":147.46,"Limpeza":140.12,"Bebidas":110.46,"Congelados":35.96,"Carnes e Aves":514.48},"itens":[{"desc":"Feijao Preto Combrasil 1kg","cat":"Mercearia","qtd":3,"un":"Un","preco":6.79,"key":"feijao preto 1000g"},{"desc":"Milho de Pipoca Yoki Micro Manteiga 100g","cat":"Mercearia","qtd":2,"un":"Un","preco":3.99,"key":"milho pipoca yoki micro 100g"},{"desc":"Milho de Pipoca Yoki Micro Caramelo 160g","cat":"Mercearia","qtd":1,"un":"Un","preco":6.69,"key":"milho pipoca yoki micro 160g"},{"desc":"Milho de Pipoca Yoki Micro Toque Chef 100g","cat":"Mercearia","qtd":1,"un":"Un","preco":3.99,"key":"milho pipoca yoki micro 100g"},{"desc":"Chocolate Nestle Duo Cookie 150g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":13.15,"key":"chocolate nestle duo cookie 150g"},{"desc":"Chocolate Branco Lacta Laka 145g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":12.99,"key":"chocolate branco lacta laka 145g"},{"desc":"Farinha de Rosca Granfino 500g","cat":"Mercearia","qtd":1,"un":"Un","preco":5.58,"key":"farinha de rosca 500g"},{"desc":"Tapioca da Terrinha 500g","cat":"Mercearia","qtd":3,"un":"Un","preco":7.38,"key":"tapioca 500g"},{"desc":"Sal Domestico Cisne 1kg","cat":"Mercearia","qtd":1,"un":"Un","preco":3.79,"key":"sal 1000g"},{"desc":"Arroz Arborio Pilecco 1kg","cat":"Mercearia","qtd":1,"un":"Un","preco":17.8,"key":"arroz arborio 1000g"},{"desc":"Molho Tare Sakura 180ml","cat":"Mercearia","qtd":1,"un":"Un","preco":7.99,"key":"molho tare sakura 180ml"},{"desc":"Chocolate Lacta Bis Branco 201,6g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":10.99,"key":"chocolate lacta bis branco 202g"},{"desc":"Farofa Bom Gosto Caseira 900g","cat":"Mercearia","qtd":1,"un":"Un","preco":18.99,"key":"farofa bom gosto caseira 900g"},{"desc":"Vinagre de Alcool Peixe 750ml","cat":"Mercearia","qtd":1,"un":"Un","preco":2.29,"key":"vinagre 750ml"},{"desc":"Mel Melbras 220g","cat":"Mercearia","qtd":1,"un":"Un","preco":16.3,"key":"mel melbras 220g"},{"desc":"Milho Verde Pramesa Lata 170g","cat":"Mercearia","qtd":2,"un":"Un","preco":2.79,"key":"milho verde pramesa lata 170g"},{"desc":"Batata Ruffles Sour Cream 100g","cat":"Doces e Snacks","qtd":2,"un":"Un","preco":10.99,"key":"batata ruffles sour cream 100g"},{"desc":"Oleo de Soja Liza 900ml","cat":"Mercearia","qtd":1,"un":"Un","preco":7.29,"key":"oleo de soja 900ml"},{"desc":"Manteiga Itambe c/Sal 200g","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":11.17,"key":"manteiga itambe sal 200g"},{"desc":"Espiral Jimo c/10un","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":8.63,"key":"espiral jimo 10un c10"},{"desc":"Queijo Parmesao Quata Fracionado","cat":"Laticínios e Frios","qtd":0.156,"un":"Kg","preco":138.46,"key":"queijo parmesao"},{"desc":"Arroz Tio Joao Tipo1 5kg","cat":"Mercearia","qtd":1,"un":"Un","preco":27.95,"key":"arroz 5000g"},{"desc":"Leite Condensado Italac 395g","cat":"Laticínios e Frios","qtd":3,"un":"Un","preco":4.99,"key":"leite condensado 395g"},{"desc":"Ketchup Hemmer Tradicional 750ml","cat":"Mercearia","qtd":1,"un":"Un","preco":14.9,"key":"ketchup hemmer tradicional 750ml"},{"desc":"Creme de Leite Italac 200g","cat":"Laticínios e Frios","qtd":5,"un":"Un","preco":1.99,"key":"creme de leite 200g"},{"desc":"Biscoito Piraque Rec Chocolate 160g","cat":"Doces e Snacks","qtd":2,"un":"Un","preco":3.75,"key":"biscoito piraque rec chocolate 160g"},{"desc":"Sabonete Nivea Karite Lima 80g","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":3.49,"key":"sabonete nivea karite lima 80g"},{"desc":"Sabonete Nivea Abacate Camomila 80g","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":3.49,"key":"sabonete nivea abacate camomila 80g"},{"desc":"Macarrao Galo Semola Ninho N2 500g","cat":"Mercearia","qtd":1,"un":"Un","preco":5.28,"key":"macarrao galo semola ninho 500g"},{"desc":"Toalha Umedecida Piquitucho c/96","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":9.98,"key":"toalha umedecida piquitucho c96"},{"desc":"Esponja Bombril Sintetica Multiuso L4P3","cat":"Limpeza","qtd":1,"un":"Un","preco":5.69,"key":"esponja bombril sintetica multiuso l4p3"},{"desc":"Detergente Sanitario Hippo Gel Adesivo Citrus 38g","cat":"Limpeza","qtd":1,"un":"Un","preco":16.61,"key":"detergente 38g"},{"desc":"Sabonete Phebo Odor Rosas 90g","cat":"Higiene Pessoal","qtd":12,"un":"Un","preco":3.79,"key":"sabonete phebo odor rosas 90g"},{"desc":"Inseticida Raid Multi Base Agua 420ml","cat":"Limpeza","qtd":1,"un":"Un","preco":15.9,"key":"inseticida raid multi base 420ml"},{"desc":"Desinfetante Pinho Bril Perf c/Lavanda 1,75L","cat":"Limpeza","qtd":1,"un":"Un","preco":15.9,"key":"desinfetante pinho bril perf 1750ml"},{"desc":"Saco de Lixo Koleta Black 15L c/100un","cat":"Limpeza","qtd":1,"un":"Un","preco":17.4,"key":"saco lixo koleta black 15000ml"},{"desc":"Sabonete Nivea Oleo Jojoba Framboesa 80g","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":3.49,"key":"sabonete nivea oleo jojoba 80g"},{"desc":"Sabonete Granado Enxofre 90g","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":7.89,"key":"sabonete granado enxofre 90g"},{"desc":"Sabonete Nivea Pure Milk 90g","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":3.49,"key":"sabonete nivea pure milk 90g"},{"desc":"Sabonete Nivea Cacau Jasmim 80g","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":3.49,"key":"sabonete nivea cacau jasmim 80g"},{"desc":"Limpador Secar Concentrado Perfumado 120ml","cat":"Limpeza","qtd":1,"un":"Un","preco":8.9,"key":"limpador secar concentrado perfumado 120ml"},{"desc":"Desodorante Rexona Men Aerosol 250ml","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":20.6,"key":"desodorante rexona men aerosol 250ml"},{"desc":"Limpador Uau Pes Alta Perfumacao 500ml","cat":"Limpeza","qtd":1,"un":"Un","preco":5.99,"key":"limpador uau pes alta 500ml"},{"desc":"Sabonete Phebo Patchouly 90g","cat":"Higiene Pessoal","qtd":3,"un":"Un","preco":3.79,"key":"sabonete phebo patchouly 90g"},{"desc":"Amaciante Downy Concentrado Alfazema 1L","cat":"Limpeza","qtd":1,"un":"Un","preco":17.5,"key":"amaciante downy concentrado alfazema 1000ml"},{"desc":"Agua Sanitaria Vex 5L","cat":"Limpeza","qtd":1,"un":"Un","preco":9.97,"key":"agua sanitaria 5000ml"},{"desc":"Agua Mineral Donna 1,5L","cat":"Bebidas","qtd":18,"un":"Un","preco":2.28,"key":"agua mineral 1500ml"},{"desc":"Refrigerante Coca-Cola Sem Acucar 200ml","cat":"Bebidas","qtd":12,"un":"Un","preco":1.89,"key":"refrigerante coca cola acucar 200ml"},{"desc":"Refrigerante Coca-Cola Zero 1,5L","cat":"Bebidas","qtd":6,"un":"Un","preco":7.79,"key":"refrigerante coca cola zero 1500ml"},{"desc":"Alcool Liquido Montenegro 46 1L","cat":"Limpeza","qtd":1,"un":"Un","preco":7.99,"key":"alcool 1000ml"},{"desc":"Saponaceo Cif Cremoso Original 250ml","cat":"Limpeza","qtd":2,"un":"Un","preco":7.99,"key":"saponaceo cif cremoso original 250ml"},{"desc":"Escova de Dente Colgate Premier Clean","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":2.99,"key":"escova dente colgate premier"},{"desc":"Esponja de Aco Bombril 45g c/6un","cat":"Limpeza","qtd":1,"un":"Un","preco":2.29,"key":"esponja aco bombril 45g"},{"desc":"Massa de Pastel Napoles Medio 400g","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":6.99,"key":"massa pastel napoles medio 400g"},{"desc":"Margarina Qualy 1kg","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":19.98,"key":"margarina qualy 1000g"},{"desc":"Absorvente Intimus Antibacteriano c/28","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":14.25,"key":"absorvente intimus antibacteriano c28"},{"desc":"Batata Palha Yoki 380g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":19.9,"key":"batata palha yoki 380g"},{"desc":"Cheetos Elma Chips Onda 160g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":10.95,"key":"cheetos elma chips onda 160g"},{"desc":"Batata Bobs Croc Palito Congelada 1,05kg","cat":"Congelados","qtd":1,"un":"Un","preco":16.98,"key":"batata bobs croc palito 1050g"},{"desc":"Bife Copa Lombo Suino Seara","cat":"Carnes e Aves","qtd":1.622,"un":"Kg","preco":28.98,"key":"copa lombo"},{"desc":"File de Coxa c/Sobrecoxa Rivelli","cat":"Carnes e Aves","qtd":3,"un":"Un","preco":17.98,"key":"coxa"},{"desc":"Acem Bovino Moido","cat":"Carnes e Aves","qtd":1.014,"un":"Kg","preco":50.49,"key":"acem"},{"desc":"Bife Alcatra Bovino Friboi","cat":"Carnes e Aves","qtd":1.076,"un":"Kg","preco":65.98,"key":"alcatra"},{"desc":"Embutido Levissimo Seara","cat":"Carnes e Aves","qtd":0.126,"un":"Kg","preco":33.89,"key":"embutido levissimo seara"},{"desc":"Sacola Retornavel TNT 40x43","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":6.25,"key":"sacola retornavel tnt"},{"desc":"Acem Bovino Moido","cat":"Carnes e Aves","qtd":1.582,"un":"Kg","preco":50.49,"key":"acem"},{"desc":"Frango a Passarinho Sadia IQF","cat":"Carnes e Aves","qtd":2,"un":"Un","preco":13.99,"key":"frango a passarinho"},{"desc":"Fraldinha Bovina","cat":"Carnes e Aves","qtd":1.674,"un":"Kg","preco":39.98,"key":"fraldinha"},{"desc":"File de Frango Cancao 1kg","cat":"Carnes e Aves","qtd":2,"un":"Un","preco":15.47,"key":"file de frango 1000g"},{"desc":"Alho Easychef Congelado 1,1kg","cat":"Congelados","qtd":1,"un":"Un","preco":18.98,"key":"alho easychef congelado 1100g"},{"desc":"Paleta Bovina Friboi","cat":"Carnes e Aves","qtd":0.582,"un":"Kg","preco":41.98,"key":"paleta"},{"desc":"Peito Bovino Friboi","cat":"Carnes e Aves","qtd":0.682,"un":"Kg","preco":41.98,"key":"peito bovino"},{"desc":"Carne Seca Precioso","cat":"Carnes e Aves","qtd":0.602,"un":"Kg","preco":46.99,"key":"carne seca"},{"desc":"Toalha de Papel Absoluto 240fl 2rolos","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":9.7,"key":"toalha de papel 240fl 2rol"},{"desc":"Papel Higienico Neve 20m L16","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":25.98,"key":"papel higienico neve l16"}]};
+const COMPRAS_INICIAIS = [ compraAssaiInicial(), COMPRA_MUNDIAL ];
+
+let historico = ler(CHAVE_HIST) || [];
+// as compras mantidas no arquivo (COMPRAS_INICIAIS) sao injetadas/atualizadas uma vez por versao;
+// as compras que o usuario fechou manualmente (outros ids) sao preservadas
+if(ler(CHAVE_SEED) !== SEED_VERSAO){
+  const idsArquivo = new Set(COMPRAS_INICIAIS.map(c => c.id));
+  historico = historico.filter(h => !idsArquivo.has(h.id));
+  COMPRAS_INICIAIS.forEach(c => historico.push(c));
+  historico.sort((a,b)=> a.id - b.id);
+  gravar(CHAVE_SEED, SEED_VERSAO);
+  gravar(CHAVE_HIST, historico);
+}
+
+// limpeza unica: remove compras antigas sem mercado (fechadas antes do campo existir)
+const CHAVE_LIMPEZA = 'listaCompras.limpeza';
+const LIMPEZA_VERSAO = 'v1-sem-mercado';
+if(ler(CHAVE_LIMPEZA) !== LIMPEZA_VERSAO){
+  const antes = historico.length;
+  historico = historico.filter(c => c.id === 1 || (c.mercado && String(c.mercado).trim()));
+  if(historico.length !== antes) gravar(CHAVE_HIST, historico);
+  gravar(CHAVE_LIMPEZA, LIMPEZA_VERSAO);
+}
+
+// para cada produto, em qual compra/mercado ele saiu mais barato
+function calcularMapaBarato(){
+  const mapa = {};
+  historico.forEach(c => {
+    const merc = c.mercado || c.mes || 'compra';
+    (c.itens || []).forEach(it => {
+      if(it.preco == null) return;
+      const k = keyOf(it);
+      const atual = mapa[k];
+      if(!atual || it.preco < atual.preco) mapa[k] = {preco: it.preco, mercado: merc, desc: it.desc};
+    });
+  });
+  return mapa;
+}
+let mapaBarato = {};
+
+/* ================= UTIL ================= */
+function brl(v){
+  return 'R$ ' + (v||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ===== normalizacao de produto: compara por PRODUTO + TAMANHO, ignorando a marca ===== */
+const _MARCAS = ["combrasil","yoki","nestle","lacta","laka","bis","granfino","terrinha","cisne","pilecco",
+ "sakura","bom gosto","peixe","melbras","pramesa","ruffles","liza","itambe","jimo","quata","tio joao",
+ "italac","hemmer","piraque","nivea","galo","piquitucho","bombril","hippo","phebo","raid","pinho bril",
+ "koleta","granado","rexona","uau","downy","vex","montenegro","cif","colgate","napoles","qualy","intimus",
+ "elma chips","cheetos","bobs","seara","rivelli","friboi","cry","sadia","cancao","easychef","precioso",
+ "j beef","jbeef","temasi","absoluto","neve","omo","ype","sanol","comfort","pato","veja","sbp","azulim",
+ "palmolive","nova era","odd","scotch-brite","scotch brite","embalixo","condor","bom ar","caravelas",
+ "royal","adria","predileto","kicaldo","maizena","classic","duo cookie","reserva","levissimo","premier",
+ "toque chef","cob caram","toq chef","man/cinem","semidesn","fracionado","semola","ninho","nosso mel",
+ "sintetic","essenc","antb toda ren","toda ren","tubo s cream","s cream","perf c lav","gel ades ap citr",
+ "mult b agua","alta per","cremoso","sup fol tr","c/sob","s/o bdj","s/o band","na med iqf","bov","sui",
+ "pedaco","p a","carteira","original","medio","tradicional"];
+const _ABREV = {"choc":"chocolate","bco":"branco","refrige":"refrigerante","desinfe":"desinfetante",
+ "det":"detergente","san":"sanitario","sac":"saco","lix":"lixo","abs":"absorvente","pap":"papel",
+ "hig":"higienico","esc":"escova","den":"dente","desod":"desodorante","aer":"aerosol","limpado":"limpador",
+ "que":"queijo","parm":"parmesao","macar":"macarrao","insetic":"inseticida","cond":"condensado",
+ "catchup":"ketchup","umed":"umedecida","aco":"aco","liq":"liquido","min":"mineral","pip":"pipoca"};
+function _semAcento(s){ return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+function _tamanho(desc){
+  const d = _semAcento(desc);
+  const re = /(\d+[.,]?\d*)\s*(kg|ml|lt|l|g)\b/g;
+  let m, ult = null;
+  while((m = re.exec(d)) !== null) ult = m;
+  if(!ult) return null;
+  let val = parseFloat(ult[1].replace('.','').replace(',','.'));
+  if(isNaN(val)) val = parseFloat(ult[1].replace(',','.'));
+  let un = ult[2];
+  if(un === 'l' || un === 'lt'){ val *= 1000; un = 'ml'; }
+  else if(un === 'kg'){ val *= 1000; un = 'g'; }
+  return Math.round(val) + un;
+}
+const _TIPOS = ["pipoca de micro ondas", "agua com gas", "agua de coco", "creme de leite", "leite em po", "massa de pastel", "massa para pastel", "massa de lasanha", "oleo de soja", "farinha de rosca", "farinha de trigo", "farinha de mandioca", "molho de tomate", "extrato de tomate", "milho para pipoca", "amido de milho", "leite de coco", "sabao em po", "sabao em barra", "sabao de coco", "saco de lixo", "esponja de aco", "pano de chao", "escova de dente", "toalha de papel", "aparelho de barbear", "file de frango", "frango a passarinho", "asa de frango", "agua mineral", "leite condensado", "leite integral", "leite desnatado", "queijo parmesao", "queijo prato", "queijo mussarela", "arroz arborio", "arroz integral", "arroz parboilizado", "feijao preto", "feijao carioca", "feijao fradinho", "acucar refinado", "acucar cristal", "sal grosso", "macarrao instantaneo", "molho tare", "molho shoyu", "milho verde", "batata palha", "batata frita", "sabao liquido", "limpador multiuso", "limpa vidros", "pano multiuso", "desodorizador sanitario", "lustra moveis", "tira manchas", "agua sanitaria", "sabonete liquido", "creme dental", "fio dental", "papel higienico", "papel toalha", "toalha umedecida", "lenco umedecido", "protetor solar", "carne seca", "carne moida", "peito bovino", "copa lombo", "papel aluminio", "filme plastico", "copo descartavel", "prato descartavel", "refrigerante", "suco", "cerveja", "energetico", "manteiga", "margarina", "requeijao", "queijo", "iogurte", "presunto", "mortadela", "bacon", "azeite", "vinagre", "arroz", "feijao", "acucar", "sal", "farofa", "farinha", "macarrao", "molho", "pipoca", "ketchup", "catchup", "maionese", "mostarda", "mel", "tapioca", "fermento", "gelatina", "achocolatado", "cafe", "caldo", "tempero", "sardinha", "atum", "biscoito", "chocolate", "bombom", "bala", "salgadinho", "amendoim", "sabao", "amaciante", "detergente", "desinfetante", "alcool", "inseticida", "saponaceo", "limpador", "esponja", "odorizador", "alvejante", "cera", "sabonete", "shampoo", "condicionador", "desodorante", "absorvente", "fralda", "cotonete", "algodao", "hidratante", "acem", "alcatra", "fraldinha", "paleta", "costela", "picanha", "maminha", "patinho", "coxao", "frango", "coxa", "sobrecoxa", "linguica", "salsicha", "embutido", "bife", "carne", "sacola", "guardanapo", "fosforo", "vela", "pilha", "espiral", "lixeira", "pote", "touca", "luva", "alho"];
+const _COMMODITIES = new Set(["acem", "acucar", "acucar cristal", "acucar refinado", "agua com gas", "agua de coco", "agua mineral", "agua sanitaria", "alcatra", "alcool", "amido de milho", "arroz", "arroz arborio", "arroz integral", "arroz parboilizado", "asa de frango", "carne moida", "carne seca", "copa lombo", "costela", "coxa", "coxao", "creme de leite", "detergente", "farinha de mandioca", "farinha de rosca", "farinha de trigo", "feijao", "feijao carioca", "feijao fradinho", "feijao preto", "fermento", "file de frango", "fraldinha", "frango", "frango a passarinho", "leite condensado", "leite desnatado", "leite integral", "maminha", "oleo de soja", "paleta", "papel toalha", "patinho", "peito bovino", "picanha", "queijo", "queijo mussarela", "queijo parmesao", "queijo prato", "sal", "sal grosso", "sobrecoxa", "tapioca", "toalha de papel", "vinagre"]);
+const _SINON = {"catchup":"ketchup"};
+function _tokens(desc){ return _semAcento(desc).split(/[^a-z]+/).filter(Boolean); }
+function _tipoDe(desc){
+  const toks=_tokens(desc);
+  for(const t of _TIPOS){ const tt=t.split(' '), n=tt.length;
+    for(let i=0;i+n<=toks.length;i++){ let ok=true; for(let j=0;j<n;j++){ if(toks[i+j]!==tt[j]){ok=false;break;} } if(ok) return _SINON[t]||t; } }
+  return null;
+}
+function _pack(desc){
+  const d=_semAcento(desc); const toks=new Set(); let m;
+  const add=(re,fn)=>{ while((m=re.exec(d))!==null) toks.add(fn(m)); };
+  add(/c\/\s*(\d+)/g, m=>'c'+m[1]); add(/l(\d+)p(\d+)/g, m=>'l'+m[1]+'p'+m[2]);
+  add(/\b(\d+)\s*fl\b/g, m=>m[1]+'fl'); add(/\b(\d+)\s*f\b/g, m=>m[1]+'f');
+  add(/\b(\d+)\s*rol/g, m=>m[1]+'rol'); add(/\blv?(\d+)\b/g, m=>'l'+m[1]); add(/\b(\d+)\s*un\b/g, m=>m[1]+'un');
+  return [...toks].sort().join(' ');
+}
+function _descCompleta(desc){
+  let d=' '+_semAcento(desc)+' ';
+  d=d.replace(/\([^)]*\)/g,' ').replace(/\bpct\b/g,' ');
+  d=d.replace(/\d+[.,]?\d*\s*(kg|ml|lt|l|g)\b/g,' ');
+  d=d.replace(/c\/\s*\d+\s*un?|l\d+p\d+|c\/\d+|tp-?\d*|\bt1\b|\bn\d\b|\d+fl\b|\d+f\b|\d+rol\w*|\blv?\d+\b|\d+un\b|\bkg\b/g,' ');
+  const ruido=new Set(['de','da','do','com','sem','the','o','a','pa']);
+  const pal=d.split(/[^a-z]+/).filter(w=>w.length>=2 && !ruido.has(w));
+  return pal.slice(0,4).join(' ');
+}
+// chave: commodities cruzam por marca (tipo+tamanho); demais ficam presos a marca/variacao (desc completa+tamanho)
+function chaveProduto(desc){
+  const tipo=_tipoDe(desc);
+  const base=(tipo && _COMMODITIES.has(tipo)) ? tipo : _descCompleta(desc);
+  const t=_tamanho(desc), pk=_pack(desc), suf=t||pk;
+  return (suf ? (base+' '+suf) : base).trim();
+}
+// chave do item: calculada a partir da descricao (tipo de produto + tamanho),
+// para que dados ja salvos tambem usem sempre a regra de cruzamento mais atual
+function keyOf(it){ return (it && it.desc) ? chaveProduto(it.desc) : ((it && it.key) || ''); }
+
+function totalDaLista(){
+  return state.filter(i=>i.checked && i.qtdAtual > 0).reduce((s,i)=> s + i.qtdAtual*i.preco, 0);
+}
+function gastoPorCategoria(){
+  const g = {};
+  state.filter(i=>i.checked && i.qtdAtual > 0).forEach(i => {
+    g[i.cat] = (g[i.cat]||0) + i.qtdAtual*i.preco;
+  });
+  return g;
+}
+
+/* ================= ABAS ================= */
+function trocarAba(aba){
+  abaAtual = aba;
+  document.getElementById('view-lista').classList.toggle('hidden', aba !== 'lista');
+  document.getElementById('view-painel').classList.toggle('hidden', aba !== 'painel');
+  document.getElementById('view-comparador').classList.toggle('hidden', aba !== 'comparador');
+  document.getElementById('aba-lista').classList.toggle('ativa', aba === 'lista');
+  document.getElementById('aba-painel').classList.toggle('ativa', aba === 'painel');
+  document.getElementById('aba-comparador').classList.toggle('ativa', aba === 'comparador');
+  document.getElementById('rodape-resumo').classList.toggle('hidden', aba !== 'lista');
+  if(aba === 'painel') renderDash();
+  if(aba === 'comparador') renderComparador();
+  window.scrollTo(0,0);
+}
+
+/* ================= LISTA ================= */
+function preencherSelectCategorias(){
+  const sel = document.getElementById('novoCat');
+  sel.innerHTML = CATEGORIAS_ORDEM.map(c => `<option value="${c}">${c}</option>`).join('');
+}
+
+function agrupar(){
+  const grupos = {};
+  CATEGORIAS_ORDEM.forEach(c => grupos[c] = []);
+  state.forEach(it => { if(!grupos[it.cat]) grupos[it.cat] = []; grupos[it.cat].push(it); });
+  return grupos;
+}
+
+function render(){
+  mapaBarato = calcularMapaBarato();
+  const termo = document.getElementById('busca').value.trim().toLowerCase();
+  const grupos = agrupar();
+  const main = document.getElementById('lista');
+  main.innerHTML = '';
+
+  CATEGORIAS_ORDEM.forEach(cat => {
+    const itens = (grupos[cat]||[]).filter(it => it.desc.toLowerCase().includes(termo));
+    if(itens.length === 0) return;
+
+    const catDiv = document.createElement('div');
+    catDiv.className = 'categoria';
+
+    const marcados = itens.filter(i=>i.checked).length;
+    catDiv.innerHTML = `
+      <div class="cat-header" onclick="toggleCat(this)">
+        <div><span class="cat-title">${cat}</span> <span class="cat-toggle-all" onclick="event.stopPropagation(); marcarCategoria('${cat}')">marcar todos</span> <span class="cat-toggle-all" onclick="event.stopPropagation(); desmarcarCategoria('${cat}')">desmarcar</span></div>
+        <span class="cat-meta">${marcados}/${itens.length} selecionados</span>
+      </div>
+      <div class="cat-body"></div>
+    `;
+    const body = catDiv.querySelector('.cat-body');
+    itens.forEach(it => {
+      const row = document.createElement('div');
+      row.className = 'item-row';
+      const rotuloPadrao = it.custom ? 'adicionado por voce' : `padrao: ${it.qtd} ${it.un}`;
+      const b = mapaBarato[keyOf(it)];
+      const tagBarato = b ? `<span class="tag-barato" title="menor preco registrado">menor: ${selo(b.mercado)} &middot; ${brl(b.preco)}</span>` : '';
+      row.innerHTML = `
+        <input type="checkbox" data-id="${it.id}" ${it.checked ? 'checked' : ''} onchange="onCheck(${it.id}, this.checked)">
+        <div class="item-desc">${esc(it.desc)}<span class="padrao">${rotuloPadrao}</span>${tagBarato}</div>
+        <div class="qtd-box">
+          <button onclick="alterarQtd(${it.id}, -1)">-</button>
+          <input type="number" min="0" step="0.1" value="${it.qtdAtual}" data-qtd-id="${it.id}" onchange="setQtd(${it.id}, this.value)">
+          <button onclick="alterarQtd(${it.id}, 1)">+</button>
+        </div>
+        <div class="un-label">${it.un}</div>
+        <div class="preco-box" title="preco unitario deste item">
+          <span class="cifra">R$</span>
+          <input type="number" min="0" step="0.01" value="${it.preco}" data-preco-id="${it.id}" onchange="setPreco(${it.id}, this.value)">
+        </div>
+        ${it.custom ? `<span class="remover-item" onclick="removerItem(${it.id})">remover</span>` : ''}
+      `;
+      body.appendChild(row);
+    });
+    main.appendChild(catDiv);
+  });
+  atualizarResumo();
+  salvar();
+}
+
+function toggleCat(headerEl){
+  const body = headerEl.parentElement.querySelector('.cat-body');
+  body.classList.toggle('hidden');
+}
+
+function onCheck(id, checked){
+  const it = state.find(i=>i.id===id);
+  it.checked = checked;
+  render();
+}
+
+function alterarQtd(id, delta){
+  const it = state.find(i=>i.id===id);
+  let novo = Math.round((parseFloat(it.qtdAtual) + delta) * 100) / 100;
+  if(novo < 0) novo = 0;
+  it.qtdAtual = novo;
+  if(novo > 0) it.checked = true;
+  render();
+}
+
+function setQtd(id, val){
+  const it = state.find(i=>i.id===id);
+  let v = parseFloat(val);
+  if(isNaN(v) || v < 0) v = 0;
+  it.qtdAtual = v;
+  if(v > 0) it.checked = true;
+  render();
+}
+
+function setPreco(id, val){
+  const it = state.find(i=>i.id===id);
+  let v = parseFloat(String(val).replace(',','.'));
+  if(isNaN(v) || v < 0) v = 0;
+  it.preco = v;
+  render();
+}
+
+function marcarCategoria(cat){
+  state.filter(i=>i.cat===cat).forEach(i=>i.checked = true);
+  render();
+}
+function desmarcarCategoria(cat){
+  state.filter(i=>i.cat===cat).forEach(i=>i.checked = false);
+  render();
+}
+function marcarTodos(v){
+  state.forEach(i=>i.checked = v);
+  render();
+}
+function resetarPadrao(){
+  state = state.filter(i => !i.custom);
+  state.forEach(i=>{ i.qtdAtual = i.qtd; i.checked = false; });
+  render();
+}
+
+function adicionarItem(){
+  const desc = document.getElementById('novoDesc').value.trim();
+  if(!desc){ alert('Digite o nome do produto.'); return; }
+  const cat = document.getElementById('novoCat').value;
+  let qtd = parseFloat(document.getElementById('novoQtd').value);
+  if(isNaN(qtd) || qtd <= 0) qtd = 1;
+  const un = document.getElementById('novoUn').value.trim() || 'Un';
+  let preco = parseFloat(document.getElementById('novoPreco').value);
+  if(isNaN(preco) || preco < 0) preco = 0;
+
+  state.push({ id: proximoId++, desc, cat, qtd, un, preco, qtdAtual: qtd, checked: true, custom: true });
+
+  document.getElementById('novoDesc').value = '';
+  document.getElementById('novoQtd').value = '1';
+  document.getElementById('novoUn').value = 'Un';
+  document.getElementById('novoPreco').value = '0';
+  document.getElementById('novoDesc').focus();
+  render();
+}
+
+function removerItem(id){
+  state = state.filter(i => i.id !== id);
+  render();
+}
+
+function atualizarResumo(){
+  const selecionados = state.filter(i=>i.checked && i.qtdAtual > 0);
+  document.getElementById('contagem').textContent = selecionados.length + ' itens selecionados';
+  document.getElementById('totalEstimado').textContent = brl(totalDaLista());
+}
+
+document.getElementById('busca').addEventListener('input', render);
+document.getElementById('mesRef').addEventListener('input', salvar);
+document.getElementById('buscaComp').addEventListener('input', renderComparador);
+document.getElementById('ordemComp').addEventListener('change', renderComparador);
+document.getElementById('soComparaveis').addEventListener('change', renderComparador);
+
+/* ================= EXPORTAR ================= */
+function listaFinal(){
+  const grupos = {};
+  CATEGORIAS_ORDEM.forEach(c => grupos[c] = []);
+  state.filter(i=>i.checked && i.qtdAtual > 0).forEach(i => grupos[i.cat].push(i));
+  return grupos;
+}
+
+// procura, do historico mais recente para o mais antigo, o ultimo preco unitario pago neste produto
+function ultimoPrecoPago(item){
+  const alvo = keyOf(item);
+  for(let k = historico.length - 1; k >= 0; k--){
+    const it = (historico[k].itens || []).find(x => keyOf(x) === alvo);
+    if(it && it.preco != null) return {preco: it.preco, onde: historico[k].mercado || historico[k].mes || ''};
+  }
+  return null;
+}
+
+function baixarTexto(){
+  const mes = document.getElementById('mesRef').value.trim() || 'proxima compra';
+  const grupos = listaFinal();
+  let linhas = [`LISTA DE COMPRAS - ${mes.toUpperCase()}`, ''];
+  let total = 0;
+  CATEGORIAS_ORDEM.forEach(cat => {
+    const itens = grupos[cat];
+    if(!itens || itens.length === 0) return;
+    linhas.push(`== ${cat} ==`);
+    itens.forEach(i => {
+      const ult = ultimoPrecoPago(i);
+      const nota = ult ? `  (ult.: R$ ${ult.preco.toFixed(2).replace('.', ',')})` : '';
+      linhas.push(`[ ] ${i.desc} - ${i.qtdAtual} ${i.un}${nota}`);
+      total += i.qtdAtual * i.preco;
+    });
+    linhas.push('');
+  });
+  linhas.push(`Total estimado: R$ ${total.toFixed(2).replace('.', ',')}`);
+  const blob = new Blob([linhas.join('\n')], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `lista_compras_${mes.replace(/\s+/g,'_')}.txt`;
+  a.click();
+}
+
+function gerarPDF(){
+  const mes = document.getElementById('mesRef').value.trim() || 'Proxima Compra';
+  const grupos = listaFinal();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 18;
+  doc.setFontSize(16);
+  doc.text(`Lista de Compras - ${mes}`, 14, y);
+  y += 6;
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')}`, 14, y);
+  doc.setTextColor(0);
+  y += 10;
+
+  const temHistorico = historico.length > 0;
+  const xPreco = 196; // borda direita util (A4 = 210mm)
+
+  // cabecalho de coluna do preco
+  if(temHistorico){
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text('ult. preco pago', xPreco, y - 2, {align:'right'});
+    doc.setTextColor(0);
+  }
+
+  let total = 0;
+  CATEGORIAS_ORDEM.forEach(cat => {
+    const itens = grupos[cat];
+    if(!itens || itens.length === 0) return;
+    if(y > 270){ doc.addPage(); y = 18; }
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text(cat, 14, y);
+    doc.setFont(undefined, 'normal');
+    y += 6;
+    doc.setFontSize(10);
+    itens.forEach(i => {
+      if(y > 285){ doc.addPage(); y = 18; }
+      doc.text(`[ ]  ${i.desc}  -  ${i.qtdAtual} ${i.un}`, 18, y);
+      const ult = ultimoPrecoPago(i);
+      if(ult){
+        doc.setTextColor(90);
+        doc.text(`R$ ${ult.preco.toFixed(2).replace('.', ',')}`, xPreco, y, {align:'right'});
+        doc.setTextColor(0);
+      }
+      total += i.qtdAtual * i.preco;
+      y += 6;
+    });
+    y += 4;
+  });
+
+  if(y > 270){ doc.addPage(); y = 18; }
+  doc.setFont(undefined, 'bold');
+  doc.text(`Total estimado: R$ ${total.toFixed(2).replace('.', ',')}`, 14, y + 4);
+  if(!temHistorico){
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text('feche a primeira compra para o PDF passar a mostrar o preco pago em cada item', 14, y + 11);
+    doc.setTextColor(0);
+  }
+
+  doc.save(`lista_compras_${mes.replace(/\s+/g,'_')}.pdf`);
+}
+
+/* ================= FECHAR COMPRA ================= */
+function abrirFecharCompra(){
+  const selecionados = state.filter(i=>i.checked && i.qtdAtual > 0);
+  if(selecionados.length === 0){
+    alert('Marque pelo menos um item antes de fechar a compra.');
+    return;
+  }
+  const mes = document.getElementById('mesRef').value.trim();
+  const estimado = totalDaLista();
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-bg" onclick="if(event.target===this) fecharModal()">
+      <div class="modal">
+        <h3>Fechar a compra</h3>
+        <p class="ajuda">Guarda esta compra no historico. Registre o mercado e o valor da notinha para o painel comparar os precos entre os mercados.</p>
+        <label for="m-mercado">Mercado</label>
+        <input type="text" id="m-mercado" placeholder="Ex: Guanabara, Assai, Supermarket...">
+        <label for="m-mes">Mes / referencia</label>
+        <input type="text" id="m-mes" value="${esc(mes)}" placeholder="Ex: Agosto/2026">
+        <label for="m-real">Valor que a notinha deu no fim (R$)</label>
+        <input type="number" id="m-real" step="0.01" min="0" placeholder="${estimado.toFixed(2)}">
+        <div class="modal-actions">
+          <button class="btn" onclick="fecharModal()">Cancelar</button>
+          <button class="btn accent" onclick="confirmarFecharCompra()">Fechar compra</button>
+        </div>
+      </div>
+    </div>
+  `;
+  setTimeout(()=>{ const el = document.getElementById('m-mercado'); if(el) el.focus(); }, 30);
+}
+
+function fecharModal(){
+  document.getElementById('modal-root').innerHTML = '';
+}
+
+function confirmarFecharCompra(){
+  const mercado = document.getElementById('m-mercado').value.trim();
+  if(!mercado){ alert('Escreva o nome do mercado.'); return; }
+  const mes = document.getElementById('m-mes').value.trim();
+  const estimado = totalDaLista();
+  let real = parseFloat(document.getElementById('m-real').value);
+  if(isNaN(real) || real < 0) real = null;
+
+  const selecionados = state.filter(i=>i.checked && i.qtdAtual > 0);
+
+  historico.push({
+    id: Date.now(),
+    mercado,
+    mes,
+    data: new Date().toISOString(),
+    estimado,
+    real,
+    nItens: selecionados.length,
+    porCategoria: gastoPorCategoria(),
+    itens: selecionados.map(i => ({desc:i.desc, cat:i.cat, qtd:i.qtdAtual, un:i.un, preco:i.preco}))
+  });
+
+  if(mes) document.getElementById('mesRef').value = mes;
+  salvar();
+  fecharModal();
+  trocarAba('painel');
+}
+
+function rotuloCompra(c){
+  return c.mercado || c.mes || 'Compra';
+}
+
+function removerCompra(id){
+  const c = historico.find(h=>h.id===id);
+  if(!confirm(`Remover a compra de ${rotuloCompra(c)} do historico?`)) return;
+  historico = historico.filter(h => h.id !== id);
+  salvar();
+  renderDash();
+}
+
+function editarReal(id){
+  const c = historico.find(h=>h.id===id);
+  const v = prompt(`Valor real da compra em ${rotuloCompra(c)} (R$):`, c.real != null ? c.real : '');
+  if(v === null) return;
+  const n = parseFloat(String(v).replace(',','.'));
+  c.real = (isNaN(n) || n < 0) ? null : n;
+  salvar();
+  renderDash();
+}
+
+function editarMercado(id){
+  const c = historico.find(h=>h.id===id);
+  const v = prompt('Nome do mercado:', c.mercado || '');
+  if(v === null) return;
+  c.mercado = v.trim();
+  salvar();
+  render();
+  renderDash();
+}
+
+/* ================= GRAFICOS ================= */
+function barrasHorizontais(dados, corFn){
+  if(dados.length === 0) return '';
+  const max = Math.max(...dados.map(d=>d.valor));
+  return dados.map(d => `
+    <div class="barra-linha">
+      <div class="barra-topo">
+        <span class="nome">${esc(d.nome)}</span>
+        <span class="val">${brl(d.valor)}${d.extra ? ' &middot; ' + esc(d.extra) : ''}</span>
+      </div>
+      <div class="barra-trilho">
+        <div class="barra-preenche" style="width:${max > 0 ? (d.valor/max*100) : 0}%; background:${corFn(d)}"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function graficoLinha(pontos){
+  const W = 640, H = 240, ml = 62, mr = 16, mt = 18, mb = 42;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const vals = pontos.map(p=>p.valor);
+  const maxV = Math.max(...vals) * 1.12;
+  const minV = 0;
+  const x = i => pontos.length === 1 ? ml + iw/2 : ml + (i/(pontos.length-1))*iw;
+  const y = v => mt + ih - ((v - minV)/(maxV - minV || 1))*ih;
+
+  let grades = '', rotulos = '';
+  for(let k=0; k<=4; k++){
+    const v = minV + (maxV-minV)*k/4;
+    const yy = y(v);
+    grades += `<line x1="${ml}" y1="${yy}" x2="${W-mr}" y2="${yy}" stroke="#EDEFE9" stroke-width="1"/>`;
+    rotulos += `<text x="${ml-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="#6b7566">${Math.round(v)}</text>`;
+  }
+
+  const d = pontos.map((p,i)=> `${i===0?'M':'L'}${x(i)},${y(p.valor)}`).join(' ');
+  const area = `M${x(0)},${mt+ih} ` + pontos.map((p,i)=> `L${x(i)},${y(p.valor)}`).join(' ') + ` L${x(pontos.length-1)},${mt+ih} Z`;
+
+  const pts = pontos.map((p,i)=> `
+    <circle cx="${x(i)}" cy="${y(p.valor)}" r="4.5" fill="#fff" stroke="#2F5233" stroke-width="2.5"/>
+    <text x="${x(i)}" y="${y(p.valor)-11}" text-anchor="middle" font-size="10" font-weight="600" fill="#2F5233">${p.valor.toFixed(0)}</text>
+    <text x="${x(i)}" y="${H-14}" text-anchor="middle" font-size="10" fill="#6b7566">${esc(p.rotulo)}</text>
+  `).join('');
+
+  return `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolucao do total mes a mes">
+    ${grades}${rotulos}
+    ${pontos.length > 1 ? `<path d="${area}" fill="#2F5233" opacity="0.07"/>` : ''}
+    ${pontos.length > 1 ? `<path d="${d}" fill="none" stroke="#2F5233" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+    ${pts}
+    <text x="${ml-8}" y="${mt-6}" text-anchor="end" font-size="9" fill="#9AA396">R$</text>
+  </svg>`;
+}
+
+function graficoEstimadoReal(compras){
+  const W = 640, H = 250, ml = 62, mr = 16, mt = 18, mb = 52;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const maxV = Math.max(...compras.flatMap(c => [c.estimado, c.real || 0])) * 1.12 || 1;
+  const y = v => mt + ih - (v/maxV)*ih;
+  const passo = iw / compras.length;
+  const larg = Math.min(26, passo/3);
+
+  let grades = '', rotulos = '';
+  for(let k=0; k<=4; k++){
+    const v = maxV*k/4, yy = y(v);
+    grades += `<line x1="${ml}" y1="${yy}" x2="${W-mr}" y2="${yy}" stroke="#EDEFE9" stroke-width="1"/>`;
+    rotulos += `<text x="${ml-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="#6b7566">${Math.round(v)}</text>`;
+  }
+
+  const barras = compras.map((c,i) => {
+    const cx = ml + passo*i + passo/2;
+    const xe = cx - larg - 2, xr = cx + 2;
+    const he = (mt+ih) - y(c.estimado);
+    const hr = c.real != null ? (mt+ih) - y(c.real) : 0;
+    return `
+      <rect x="${xe}" y="${y(c.estimado)}" width="${larg}" height="${he}" fill="#9AA396" rx="3"/>
+      ${c.real != null ? `<rect x="${xr}" y="${y(c.real)}" width="${larg}" height="${hr}" fill="#C97B2E" rx="3"/>` : ''}
+      <text x="${cx}" y="${H-30}" text-anchor="middle" font-size="10" fill="#6b7566">${esc(c.mes)}</text>
+      ${c.real != null ? `<text x="${cx}" y="${H-16}" text-anchor="middle" font-size="9" font-weight="600" fill="${c.real > c.estimado ? '#A63D40' : '#3f7a4a'}">${c.real > c.estimado ? '+' : ''}${(c.real-c.estimado).toFixed(0)}</text>` : `<text x="${cx}" y="${H-16}" text-anchor="middle" font-size="9" fill="#9AA396">sem real</text>`}
+    `;
+  }).join('');
+
+  return `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Estimado contra gasto real por mes">
+    ${grades}${rotulos}${barras}
+    <text x="${ml-8}" y="${mt-6}" text-anchor="end" font-size="9" fill="#9AA396">R$</text>
+  </svg>`;
+}
+
+// valor base de uma compra: real quando informado, senao estimado
+function valorBase(c){ return c.real != null ? c.real : c.estimado; }
+
+// grafico de barras verticais comparando o total de cada compra (mercado)
+function graficoComparacaoCompras(compras){
+  const W = 660, H = 300, ml = 56, mr = 16, mt = 22, mb = 62;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const valores = compras.map(valorBase);
+  const maxV = Math.max(...valores) * 1.15 || 1;
+  const min = Math.min(...valores), max = Math.max(...valores);
+  const y = v => mt + ih - (v/maxV)*ih;
+  const passo = iw / compras.length;
+  const larg = Math.min(64, passo*0.55);
+
+  let grades = '', rotulos = '';
+  for(let k=0; k<=4; k++){
+    const v = maxV*k/4, yy = y(v);
+    grades += `<line x1="${ml}" y1="${yy}" x2="${W-mr}" y2="${yy}" stroke="#EDEFE9" stroke-width="1"/>`;
+    rotulos += `<text x="${ml-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="#6b7566">${Math.round(v)}</text>`;
+  }
+
+  const barras = compras.map((c,i) => {
+    const v = valorBase(c);
+    const cx = ml + passo*i + passo/2;
+    const x0 = cx - larg/2;
+    const h = (mt+ih) - y(v);
+    const ehMin = v === min && max !== min;
+    const ehMax = v === max && max !== min;
+    const cor = ehMin ? '#3f7a4a' : (ehMax ? '#A63D40' : '#C97B2E');
+    const difMin = v - min;
+    const nomeCurto = (c.mercado || c.mes || 'Compra').slice(0, 14);
+    return `
+      <rect x="${x0}" y="${y(v)}" width="${larg}" height="${h}" fill="${cor}" rx="4"/>
+      <text x="${cx}" y="${y(v)-8}" text-anchor="middle" font-size="12" font-weight="700" fill="${cor}">${v.toFixed(0)}</text>
+      <text x="${cx}" y="${H-38}" text-anchor="middle" font-size="11" font-weight="600" fill="#22301E">${esc(nomeCurto)}</text>
+      ${c.mes ? `<text x="${cx}" y="${H-24}" text-anchor="middle" font-size="9" fill="#9AA396">${esc(c.mes.slice(0,16))}</text>` : ''}
+      <text x="${cx}" y="${H-10}" text-anchor="middle" font-size="10" font-weight="600" fill="${ehMin ? '#3f7a4a' : '#A63D40'}">${ehMin ? 'mais barato' : '+' + difMin.toFixed(0)}</text>
+    `;
+  }).join('');
+
+  return `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Comparativo de total entre compras">
+    ${grades}${rotulos}${barras}
+    <text x="${ml-8}" y="${mt-8}" text-anchor="end" font-size="9" fill="#9AA396">R$</text>
+  </svg>`;
+}
+
+// tabela categoria x compras, destacando o mais barato de cada linha
+function tabelaComparativa(compras){
+  const cats = CATEGORIAS_ORDEM.filter(cat =>
+    compras.some(c => (c.porCategoria||{})[cat] > 0));
+  if(cats.length === 0) return '';
+
+  let head = '<tr><th>Categoria</th>' +
+    compras.map(c => `<th><span class="mseloi" style="background:${corMercado(c.mercado||c.mes)}"></span>${esc((c.mercado || c.mes || 'Compra').slice(0,16))}</th>`).join('') + '</tr>';
+
+  let linhas = cats.map(cat => {
+    const vals = compras.map(c => (c.porCategoria||{})[cat] || 0);
+    const positivos = vals.filter(v => v > 0);
+    const menor = positivos.length ? Math.min(...positivos) : null;
+    const celulas = vals.map(v =>
+      `<td class="${(menor != null && v === menor && v > 0 && positivos.length > 1) ? 'barato' : ''}">${v > 0 ? brl(v) : '—'}</td>`
+    ).join('');
+    return `<tr><td>${esc(cat)}</td>${celulas}</tr>`;
+  }).join('');
+
+  const totais = compras.map(c => valorBase(c));
+  const menorTotal = Math.min(...totais);
+  const linhaTotal = `<tr class="total-row"><td>Total pago</td>` +
+    totais.map(t => `<td class="${(t === menorTotal && totais.length > 1) ? 'barato' : ''}">${brl(t)}</td>`).join('') +
+    '</tr>';
+
+  return `<div class="tabela-rolagem"><table class="comparativo"><thead>${head}</thead><tbody>${linhas}${linhaTotal}</tbody></table></div>`;
+}
+
+// COMPARACAO JUSTA: para cada compra, compara so os itens em comum com a compra
+// mais completa (o estoque inicial), usando as MESMAS quantidades dos dois lados.
+function comparacaoJusta(){
+  if(historico.length < 2) return null;
+  const ref = historico.reduce((a,b)=> (b.itens||[]).length > (a.itens||[]).length ? b : a);
+  const refPrecos = {};
+  (ref.itens||[]).forEach(it => {
+    const k = keyOf(it);
+    if(refPrecos[k] == null || it.preco < refPrecos[k]) refPrecos[k] = it.preco;
+  });
+
+  const comparacoes = historico.filter(c => c.id !== ref.id).map(c => {
+    let custoAqui = 0, custoRef = 0, comum = 0, vitorias = 0, soAqui = 0;
+    (c.itens||[]).forEach(it => {
+      const k = keyOf(it);
+      if(refPrecos[k] != null){
+        comum++;
+        custoAqui += it.qtd * it.preco;
+        custoRef  += it.qtd * refPrecos[k];
+        if(it.preco < refPrecos[k]) vitorias++;
+      } else { soAqui++; }
+    });
+    return {
+      mercado: c.mercado || c.mes || 'compra', mes: c.mes,
+      comum, soAqui, custoAqui, custoRef,
+      dif: custoAqui - custoRef, vitorias
+    };
+  });
+  return {ref, comparacoes};
+}
+
+// grafico de totais desembolsados (cores neutras, sem veredito de "mais barato")
+function graficoTotais(compras){
+  const W = 660, H = 280, ml = 56, mr = 16, mt = 22, mb = 56;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const valores = compras.map(valorBase);
+  const maxV = Math.max(...valores) * 1.15 || 1;
+  const y = v => mt + ih - (v/maxV)*ih;
+  const passo = iw / compras.length;
+  const larg = Math.min(64, passo*0.55);
+
+  let grades = '', rotulos = '';
+  for(let k=0; k<=4; k++){
+    const v = maxV*k/4, yy = y(v);
+    grades += `<line x1="${ml}" y1="${yy}" x2="${W-mr}" y2="${yy}" stroke="#EDEFE9" stroke-width="1"/>`;
+    rotulos += `<text x="${ml-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="#6b7566">${Math.round(v)}</text>`;
+  }
+  const barras = compras.map((c,i) => {
+    const v = valorBase(c);
+    const cx = ml + passo*i + passo/2;
+    const h = (mt+ih) - y(v);
+    const nome = (c.mercado || c.mes || 'Compra').slice(0,14);
+    return `
+      <rect x="${cx - larg/2}" y="${y(v)}" width="${larg}" height="${h}" fill="${corMercado(c.mercado)}" rx="4"/>
+      <text x="${cx}" y="${y(v)-8}" text-anchor="middle" font-size="12" font-weight="700" fill="#22301E">${v.toFixed(0)}</text>
+      <text x="${cx}" y="${H-34}" text-anchor="middle" font-size="11" font-weight="600" fill="#22301E">${esc(nome)}</text>
+      <text x="${cx}" y="${H-20}" text-anchor="middle" font-size="9.5" fill="#9AA396">${c.nItens} itens</text>
+    `;
+  }).join('');
+  return `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Total desembolsado por compra">
+    ${grades}${rotulos}${barras}
+    <text x="${ml-8}" y="${mt-8}" text-anchor="end" font-size="9" fill="#9AA396">R$</text>
+  </svg>`;
+}
+
+
+/* ==================================================================
+   NOVOS RECURSOS: comparador de precos, cesta otimizada, visao geral,
+   backup/restauracao de dados
+   ================================================================== */
+
+function nomeLimpoProduto(desc){
+  return String(desc).replace(/\s*\(pct\s*\d+\)\s*/gi,'').trim();
+}
+
+// agrega o historico por produto (chave produto+tamanho)
+function dadosComparador(){
+  const mapa = {};
+  historico.forEach(c => {
+    const merc = c.mercado || c.mes || 'compra';
+    (c.itens || []).forEach(it => {
+      if(it.preco == null) return;
+      const k = keyOf(it);
+      if(!mapa[k]) mapa[k] = {key:k, cat:it.cat, entradas:[], nomes:{}};
+      mapa[k].entradas.push({mercado:merc, preco:it.preco, data:c.data});
+      mapa[k].nomes[nomeLimpoProduto(it.desc)] = (mapa[k].nomes[nomeLimpoProduto(it.desc)]||0)+1;
+    });
+  });
+  return Object.values(mapa).map(p => {
+    const porMerc = {};
+    p.entradas.forEach(e => {
+      if(porMerc[e.mercado] == null || e.preco < porMerc[e.mercado].preco)
+        porMerc[e.mercado] = {preco:e.preco, data:e.data};
+    });
+    const mercados = Object.entries(porMerc)
+      .map(([m,v]) => ({mercado:m, preco:v.preco, data:v.data}))
+      .sort((a,b)=> a.preco - b.preco);
+    const menor = mercados[0], maior = mercados[mercados.length-1];
+    const nome = Object.keys(p.nomes).sort((a,b)=> a.length - b.length)[0];
+    const ultimaData = p.entradas.reduce((m,e)=> e.data > m ? e.data : m, '');
+    return {
+      key:p.key, nome, cat:p.cat, mercados, menor, maior, nMerc:mercados.length,
+      economia: maior.preco - menor.preco,
+      pct: menor.preco > 0 ? (maior.preco - menor.preco)/menor.preco*100 : 0,
+      ultimaData
+    };
+  });
+}
+
+function renderComparador(){
+  const el = document.getElementById('comparador');
+  if(historico.length === 0){
+    el.innerHTML = `<div class="painel"><div class="vazio"><b>Sem dados ainda</b>Feche pelo menos uma compra para o comparador comecar a montar o historico de precos por produto.</div></div>`;
+    return;
+  }
+  let dados = dadosComparador();
+  const comparaveis = dados.filter(d => d.nMerc >= 2);
+  const economiaPotencial = comparaveis.reduce((s,d)=> s + d.economia, 0);
+
+  // controles
+  const termo = (document.getElementById('buscaComp').value||'').trim().toLowerCase();
+  const ordem = document.getElementById('ordemComp').value;
+  const soComp = document.getElementById('soComparaveis').checked;
+
+  let lista = dados.slice();
+  if(soComp) lista = lista.filter(d => d.nMerc >= 2);
+  if(termo) lista = lista.filter(d => d.nome.toLowerCase().includes(termo) || d.cat.toLowerCase().includes(termo));
+  lista.sort((a,b)=>{
+    if(ordem === 'nome') return a.nome.localeCompare(b.nome);
+    if(ordem === 'caro') return b.maior.preco - a.maior.preco;
+    if(ordem === 'recente') return (b.ultimaData||'').localeCompare(a.ultimaData||'');
+    return (b.economia - a.economia) || a.nome.localeCompare(b.nome); // economia
+  });
+
+  let html = `
+    <div class="kpis" style="margin-top:14px">
+      <div class="kpi">
+        <div class="rotulo">Produtos monitorados</div>
+        <div class="valor">${dados.length}</div>
+        <div class="nota">em ${historico.length} compra${historico.length===1?'':'s'}</div>
+      </div>
+      <div class="kpi">
+        <div class="rotulo">Comparaveis</div>
+        <div class="valor">${comparaveis.length}</div>
+        <div class="nota">comprados em 2+ mercados</div>
+      </div>
+      <div class="kpi">
+        <div class="rotulo">Economia por unidade</div>
+        <div class="valor">${brl(economiaPotencial)}</div>
+        <div class="nota">somando a diferenca de cada produto comparavel</div>
+      </div>
+    </div>`;
+
+  if(lista.length === 0){
+    html += `<div class="painel"><div class="vazio"><b>Nada encontrado</b>Ajuste a busca ou desmarque "so comparaveis".</div></div>`;
+    el.innerHTML = html; return;
+  }
+
+  html += '<div class="comp-lista">';
+  lista.forEach(d => {
+    const chips = d.mercados.map((m,i) => {
+      const melhor = i === 0 && d.nMerc > 1;
+      const pior = i === d.mercados.length-1 && d.nMerc > 1;
+      return `<span class="merc-chip ${melhor?'melhor':(pior?'pior':'')}"><span class="mseloi" style="background:${corMercado(m.mercado)}"></span>${esc(m.mercado)} <b>${brl(m.preco)}</b></span>`;
+    }).join('');
+    const veredito = d.nMerc >= 2
+      ? `<span class="comp-econ">mais barato no <b>${selo(d.menor.mercado)}</b> &middot; economiza ${brl(d.economia)} (${d.pct.toFixed(0)}%)</span>`
+      : `<span class="comp-uni">so comprado no ${selo(d.mercados[0].mercado)} ate agora</span>`;
+    html += `
+      <div class="comp-item">
+        <div class="comp-topo">
+          <div class="comp-nome">${esc(d.nome)}<span class="comp-cat">${esc(d.cat)}</span></div>
+        </div>
+        <div class="merc-chips">${chips}</div>
+        <div class="comp-rodape">${veredito}</div>
+      </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// custo da lista marcada em cada mercado + cesta otimizada (comprar cada item onde e mais barato)
+function cestaOtimizada(){
+  const marcados = state.filter(i=>i.checked && i.qtdAtual > 0);
+  if(marcados.length === 0 || historico.length === 0) return null;
+
+  const precoMerc = {}; // key -> {mercado: menorPreco}
+  historico.forEach(c => {
+    const m = c.mercado || c.mes || 'compra';
+    (c.itens||[]).forEach(it => {
+      if(it.preco == null) return;
+      const k = keyOf(it);
+      precoMerc[k] = precoMerc[k] || {};
+      if(precoMerc[k][m] == null || it.preco < precoMerc[k][m]) precoMerc[k][m] = it.preco;
+    });
+  });
+
+  const mercados = [...new Set(historico.map(c => c.mercado || c.mes || 'compra'))];
+  const totMerc = {}; mercados.forEach(m => totMerc[m] = 0);
+  let totalOtimo = 0, itensSemPreco = 0;
+  const plano = {};
+
+  marcados.forEach(it => {
+    const k = keyOf(it), pm = precoMerc[k] || {};
+    mercados.forEach(m => { const p = pm[m] != null ? pm[m] : it.preco; totMerc[m] += it.qtdAtual * p; });
+    let best = null;
+    Object.entries(pm).forEach(([m,p]) => { if(best == null || p < best.preco) best = {mercado:m, preco:p}; });
+    if(best == null){ best = {mercado:'—', preco: it.preco}; itensSemPreco++; }
+    totalOtimo += it.qtdAtual * best.preco;
+    (plano[best.mercado] = plano[best.mercado] || []).push({nome:nomeLimpoProduto(it.desc), qtd:it.qtdAtual, un:it.un, preco:best.preco});
+  });
+
+  const totaisMerc = mercados.map(m => ({mercado:m, total:totMerc[m]})).sort((a,b)=> a.total - b.total);
+  const melhorUnico = totaisMerc[0];
+  return {totaisMerc, totalOtimo, melhorUnico, economia: melhorUnico.total - totalOtimo, plano, itensSemPreco, nMerc: mercados.length};
+}
+
+function detalheCompra(c){
+  const total = valorBase(c);
+  const cats = {};
+  (c.itens||[]).forEach(it => { if(it.preco==null) return; cats[it.cat] = (cats[it.cat]||0) + it.qtd*it.preco; });
+  const catsOrd = Object.entries(cats).map(([nome,valor])=>({nome,valor})).sort((a,b)=> b.valor - a.valor);
+  const tops = (c.itens||[]).map(it => ({nome:nomeLimpoProduto(it.desc), valor:it.qtd*it.preco, qtd:it.qtd, un:it.un}))
+    .sort((a,b)=> b.valor - a.valor).slice(0,5);
+  const somaItens = (c.itens||[]).reduce((s,it)=> s + (it.preco!=null? it.qtd*it.preco:0), 0) || 1;
+  return {total, somaItens, nItens:c.nItens, ticket: c.nItens ? total/c.nItens : 0, catsOrd, tops};
+}
+
+function blocoDetalhePorCompra(){
+  if(historico.length === 0) return '';
+  const cards = historico.map(c => {
+    const d = detalheCompra(c);
+    const cor = corMercado(c.mercado||'');
+    const maxCat = d.catsOrd.length ? d.catsOrd[0].valor : 1;
+    const barras = d.catsOrd.map(x => `
+      <div class="barra-linha">
+        <div class="barra-topo"><span class="nome">${esc(x.nome)}</span><span class="val">${brl(x.valor)} &middot; ${(x.valor/d.somaItens*100).toFixed(0)}%</span></div>
+        <div class="barra-trilho"><div class="barra-preenche" style="width:${x.valor/maxCat*100}%; background:${CORES[x.nome]||'#9AA396'}"></div></div>
+      </div>`).join('');
+    const tops = d.tops.map(t => `<div class="top-item"><span class="ti-nome">${esc(t.nome)} <i>${t.qtd%1===0? t.qtd : t.qtd.toFixed(3)} ${esc(t.un)}</i></span><span class="ti-val">${brl(t.valor)}</span></div>`).join('');
+    const dataFmt = new Date(c.data).toLocaleDateString('pt-BR');
+    return `
+      <div class="compra-card" style="border-left:5px solid ${cor}">
+        <div class="compra-head">
+          <div>
+            <div class="compra-merc">${selo(c.mercado||'—')}</div>
+            <div class="compra-data">${c.mes?esc(c.mes)+' &middot; ':''}${dataFmt}</div>
+          </div>
+          <div class="compra-total">
+            <div class="ct-val">${brl(d.total)}</div>
+            <div class="ct-sub">${d.nItens} itens &middot; ${brl(d.ticket)}/item</div>
+          </div>
+        </div>
+        <div class="compra-corpo">
+          <div class="compra-col">
+            <div class="col-tit">Gasto por categoria</div>
+            ${barras || '<div class="compra-nota">sem itens com preco.</div>'}
+          </div>
+          <div class="compra-col">
+            <div class="col-tit">Itens que mais pesaram</div>
+            <div class="top-lista">${tops}</div>
+            ${d.catsOrd.length ? `<div class="compra-nota">Categoria que mais pesou: <b>${esc(d.catsOrd[0].nome)}</b> (${(d.catsOrd[0].valor/d.somaItens*100).toFixed(0)}% da compra)</div>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  return `<div class="painel"><h2>Detalhe de cada compra</h2><p class="sub">Cada compra por dentro: para onde foi o dinheiro e o que pesou mais.</p>${cards}</div>`;
+}
+
+function blocoComposicaoCategorias(){
+  if(historico.length === 0) return '';
+  const linhas = historico.map(c => {
+    const total = (c.itens||[]).reduce((s,it)=> s + (it.preco!=null? it.qtd*it.preco:0), 0) || 1;
+    const cats = {};
+    (c.itens||[]).forEach(it => { if(it.preco==null) return; cats[it.cat] = (cats[it.cat]||0) + it.qtd*it.preco; });
+    const segs = Object.entries(cats).sort((a,b)=> b[1]-a[1])
+      .map(([nome,v]) => `<div class="stk-seg" style="width:${v/total*100}%; background:${CORES[nome]||'#9AA396'}" title="${esc(nome)}: ${brl(v)} (${(v/total*100).toFixed(0)}%)"></div>`).join('');
+    return `<div class="stk-row"><div class="stk-lab">${selo(c.mercado||'—')}</div><div class="stk-bar">${segs}</div></div>`;
+  }).join('');
+  const cats = [...new Set(historico.flatMap(c => (c.itens||[]).map(it => it.cat)))];
+  const leg = cats.map(ct => `<span><i style="background:${CORES[ct]||'#9AA396'}"></i>${esc(ct)}</span>`).join('');
+  return `<div class="painel"><h2>Composicao por categoria, compra a compra</h2><p class="sub">A cara de cada compra: a proporcao de cada categoria no total. Passe o mouse para ver os valores.</p>${linhas}<div class="legenda">${leg}</div></div>`;
+}
+
+function blocoCestaOtimizada(){
+  const co = cestaOtimizada();
+  if(!co) return '';
+  const temGanho = co.economia > 0.01 && co.nMerc >= 2;
+  let corpo = '';
+  if(co.nMerc < 2){
+    corpo = `<div class="vazio" style="padding:16px">Com um mercado so, ainda nao da pra otimizar. Registre a mesma lista em outro mercado.</div>`;
+  } else {
+    const barras = co.totaisMerc.map((t,i) => {
+      const max = co.totaisMerc[co.totaisMerc.length-1].total || 1;
+      return `<div class="barra-linha">
+        <div class="barra-topo"><span class="nome">Tudo no ${esc(t.mercado)}</span><span class="val">${brl(t.total)}</span></div>
+        <div class="barra-trilho"><div class="barra-preenche" style="width:${t.total/max*100}%; background:${corMercado(t.mercado)}"></div></div>
+      </div>`;
+    }).join('');
+    const planoHtml = Object.entries(co.plano).map(([m,itens]) => {
+      const soma = itens.reduce((s,i)=> s + i.qtd*i.preco, 0);
+      return `<div class="plano-merc" style="border-left:4px solid ${corMercado(m)}">
+        <div class="plano-merc-cab">${selo(m)} <span>${itens.length} ${itens.length===1?'item':'itens'} &middot; ${brl(soma)}</span></div>
+        <div class="plano-itens">${itens.map(i=>`<span class="plano-item">${esc(i.nome)} <i>${i.qtd % 1 === 0 ? i.qtd : i.qtd.toFixed(3)} ${esc(i.un)}</i></span>`).join('')}</div>
+      </div>`;
+    }).join('');
+    corpo = `
+      <div class="otim-destaque ${temGanho?'ganho':''}">
+        ${temGanho
+          ? `Comprando cada item no mercado mais barato, sua lista sai por <b>${brl(co.totalOtimo)}</b> &mdash; contra <b>${brl(co.melhorUnico.total)}</b> comprando tudo no ${selo(co.melhorUnico.mercado)}. Economia de <b>${brl(co.economia)}</b>.`
+          : `Neste momento, comprar tudo no ${selo(co.melhorUnico.mercado)} (${brl(co.melhorUnico.total)}) ja e o melhor cenario para esta lista.`}
+        ${co.itensSemPreco > 0 ? `<div class="otim-nota">${co.itensSemPreco} ${co.itensSemPreco===1?'item ainda nao tem':'itens ainda nao tem'} preco registrado e ${co.itensSemPreco===1?'entrou':'entraram'} pelo preco atual da lista.</div>` : ''}
+      </div>
+      ${barras}
+      ${temGanho ? `<div class="plano-titulo">Onde comprar cada coisa</div>${planoHtml}` : ''}`;
+  }
+  return `<div class="painel">
+    <h2>Cesta otimizada</h2>
+    <p class="sub">Baseado nos itens que voce marcou na aba Lista e nos precos ja registrados.</p>
+    ${corpo}
+  </div>`;
+}
+
+// gasto por categoria somando todas as compras
+function gastoCategoriaAcumulado(){
+  const g = {};
+  historico.forEach(c => (c.itens||[]).forEach(it => {
+    if(it.preco == null) return;
+    g[it.cat] = (g[it.cat]||0) + it.qtd*it.preco;
+  }));
+  return Object.entries(g).map(([nome,valor])=>({nome,valor})).sort((a,b)=> b.valor - a.valor);
+}
+
+function blocoVisaoGeral(){
+  if(historico.length === 0) return '';
+  const gastoTotal = historico.reduce((s,c)=> s + valorBase(c), 0);
+  const mercados = new Set(historico.map(c => c.mercado || c.mes || 'compra'));
+  const dados = dadosComparador();
+  const comparaveis = dados.filter(d => d.nMerc >= 2);
+  const economiaPot = comparaveis.reduce((s,d)=> s + d.economia, 0);
+  const catAcum = gastoCategoriaAcumulado();
+  const totalCat = catAcum.reduce((s,c)=> s + c.valor, 0) || 1;
+
+  const barras = catAcum.map(c => `
+    <div class="barra-linha">
+      <div class="barra-topo"><span class="nome">${esc(c.nome)}</span><span class="val">${brl(c.valor)} &middot; ${(c.valor/totalCat*100).toFixed(0)}%</span></div>
+      <div class="barra-trilho"><div class="barra-preenche" style="width:${c.valor/catAcum[0].valor*100}%; background:${CORES[c.nome]||'#9AA396'}"></div></div>
+    </div>`).join('');
+
+  return `
+    <div class="kpis" style="margin-top:14px">
+      <div class="kpi">
+        <div class="rotulo">Gasto acumulado</div>
+        <div class="valor">${brl(gastoTotal)}</div>
+        <div class="nota">${historico.length} compra${historico.length===1?'':'s'} em ${mercados.size} mercado${mercados.size===1?'':'s'}</div>
+      </div>
+      <div class="kpi">
+        <div class="rotulo">Produtos monitorados</div>
+        <div class="valor">${dados.length}</div>
+        <div class="nota">${comparaveis.length} ja comparaveis</div>
+      </div>
+      <div class="kpi">
+        <div class="rotulo">Economia identificada</div>
+        <div class="valor">${brl(economiaPot)}</div>
+        <div class="nota">por unidade, somando os comparaveis</div>
+      </div>
+    </div>
+    <div class="painel">
+      <h2>Gasto por categoria (todas as compras)</h2>
+      <p class="sub">Para onde seu dinheiro foi, somando ${historico.length} compra${historico.length===1?'':'s'}.</p>
+      ${barras}
+    </div>`;
+}
+
+/* ---- backup / restauracao ---- */
+function exportarDados(){
+  const dump = {
+    versao: 1,
+    exportadoEm: new Date().toISOString(),
+    estado: state,
+    historico: historico,
+    mes: document.getElementById('mesRef').value
+  };
+  const blob = new Blob([JSON.stringify(dump, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `lista_compras_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importarDados(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const dump = JSON.parse(r.result);
+      if(!dump.estado || !dump.historico) throw new Error('arquivo invalido');
+      if(!confirm('Isto vai substituir a lista e o historico atuais pelos dados do arquivo. Continuar?')){ input.value=''; return; }
+      state = dump.estado;
+      historico = dump.historico;
+      proximoId = state.reduce((m,i)=> Math.max(m, i.id||0), -1) + 1;
+      if(dump.mes != null) document.getElementById('mesRef').value = dump.mes;
+      salvar();
+      render();
+      alert('Dados importados com sucesso.');
+    } catch(e){
+      alert('Nao consegui ler este arquivo de backup.');
+    }
+    input.value = '';
+  };
+  r.readAsText(file);
+}
+
+
+/* ================= PAINEL ================= */
+function renderDash(){
+  const el = document.getElementById('dash');
+  const selecionados = state.filter(i=>i.checked && i.qtdAtual > 0);
+  const total = totalDaLista();
+  const porCat = gastoPorCategoria();
+  const catsOrdenadas = Object.entries(porCat)
+    .map(([nome,valor]) => ({nome, valor}))
+    .sort((a,b)=> b.valor - a.valor);
+  const maiorCat = catsOrdenadas[0];
+
+  const ultima = historico.length ? historico[historico.length-1] : null;
+  const baseUltima = ultima ? (ultima.real != null ? ultima.real : ultima.estimado) : null;
+  let notaVsUltima = '<span class="nota">primeira lista</span>';
+  if(baseUltima != null && total > 0){
+    const dif = total - baseUltima;
+    const pct = baseUltima > 0 ? (dif/baseUltima*100) : 0;
+    notaVsUltima = `<span class="nota ${dif > 0 ? 'sobe' : 'desce'}">${dif > 0 ? '▲' : '▼'} ${brl(Math.abs(dif))} (${Math.abs(pct).toFixed(0)}%) vs ${esc(ultima.mes)}</span>`;
+  }
+
+  const topItens = selecionados
+    .map(i => ({nome: i.desc, valor: i.qtdAtual*i.preco, extra: `${i.qtdAtual} ${i.un}`, cat: i.cat}))
+    .sort((a,b)=> b.valor - a.valor)
+    .slice(0, 10);
+
+  let html = '';
+
+  if(!armazenamentoOk){
+    html += `<div class="aviso"><b>Atencao:</b> este navegador esta bloqueando o salvamento local. O painel funciona, mas o historico se perde ao fechar a pagina. Abra o arquivo direto do seu computador ou celular para salvar.</div>`;
+  }
+
+  html += blocoVisaoGeral();
+  html += blocoDetalhePorCompra();
+  html += blocoComposicaoCategorias();
+  html += blocoCestaOtimizada();
+
+  /* --- lista atual --- */
+  if(selecionados.length === 0){
+    html += `<div class="painel"><div class="vazio"><b>Nenhum item marcado</b>Volte para a aba Lista e marque o que voce precisa comprar. O painel se monta sozinho a partir das suas marcacoes.</div></div>`;
+  } else {
+    html += `
+      <div class="kpis">
+        <div class="kpi">
+          <div class="rotulo">Total estimado</div>
+          <div class="valor">${brl(total)}</div>
+          ${notaVsUltima}
+        </div>
+        <div class="kpi">
+          <div class="rotulo">Itens marcados</div>
+          <div class="valor">${selecionados.length}</div>
+          <div class="nota">em ${catsOrdenadas.length} categorias</div>
+        </div>
+        <div class="kpi">
+          <div class="rotulo">Onde vai mais dinheiro</div>
+          <div class="valor" style="font-size:1.1rem; padding-top:4px">${esc(maiorCat.nome)}</div>
+          <div class="nota">${brl(maiorCat.valor)} &middot; ${(maiorCat.valor/total*100).toFixed(0)}% da compra</div>
+        </div>
+        <div class="kpi">
+          <div class="rotulo">Media por item</div>
+          <div class="valor">${brl(total/selecionados.length)}</div>
+          <div class="nota">${historico.length} compra${historico.length===1?'':'s'} no historico</div>
+        </div>
+      </div>
+
+      <div class="painel">
+        <h2>Gasto por categoria (lista atual)</h2>
+        <p class="sub">Da lista que voce esta montando agora.</p>
+        ${barrasHorizontais(
+          catsOrdenadas.map(c => ({...c, extra: (c.valor/total*100).toFixed(0)+'%'})),
+          d => CORES[d.nome] || '#9AA396'
+        )}
+      </div>
+
+      <div class="painel">
+        <h2>Os itens que mais pesam</h2>
+        <p class="sub">Quantidade vezes preco. Sao esses que mexem no total quando voce corta alguma coisa.</p>
+        ${barrasHorizontais(topItens, d => CORES[d.cat] || '#9AA396')}
+        <div class="legenda">
+          ${[...new Set(topItens.map(i=>i.cat))].map(c => `<span><i style="background:${CORES[c]||'#9AA396'}"></i>${esc(c)}</span>`).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  /* --- historico --- */
+  if(historico.length === 0){
+    html += `<div class="painel">
+      <h2>Comparativo entre mercados</h2>
+      <p class="sub">Ainda vazio.</p>
+      <div class="vazio"><b>Nenhuma compra registrada</b>Quando voltar do mercado, clique em <b style="display:inline">Fechar compra</b> no rodape, informe o mercado e o valor da notinha. A partir da segunda compra o painel compara os precos lado a lado.</div>
+    </div>`;
+  } else {
+    if(historico.length === 1){
+      const c = historico[0];
+      html += `
+        <div class="painel">
+          <h2>1 compra registrada</h2>
+          <p class="sub">Registre uma compra em outro mercado para a comparacao aparecer.</p>
+          <div class="podio">
+            <div class="podio-card">
+              <div class="tag">Estoque inicial</div>
+              <div class="nome">${esc(rotuloCompra(c))}</div>
+              <div class="val">${brl(valorBase(c))}</div>
+              <div class="sub">${c.mes ? esc(c.mes) + ' &middot; ' : ''}${c.nItens} itens</div>
+            </div>
+          </div>
+          <div class="aviso" style="margin-bottom:0">Na proxima compra, a comparacao vai olhar so os itens em comum com esta — assim o tamanho diferente das compras nao distorce o resultado.</div>
+        </div>`;
+    } else {
+      const cj = comparacaoJusta();
+      const cards = cj.comparacoes.map(cmp => {
+        const barato = cmp.dif < 0;
+        const pct = cmp.custoRef > 0 ? Math.abs(cmp.dif / cmp.custoRef * 100) : 0;
+        return `
+          <div class="justa-card ${barato ? 'melhor' : 'pior'}">
+            <div class="justa-topo">
+              <b>${selo(cmp.mercado)}</b>
+              <span class="comum">${cmp.comum} ${cmp.comum === 1 ? 'item em comum' : 'itens em comum'} com o ${selo(cj.ref.mercado)}</span>
+            </div>
+            <div class="justa-linha">
+              Nesses itens voce pagou <b>${brl(cmp.custoAqui)}</b> — os mesmos, nos precos do ${selo(cj.ref.mercado)}, sairiam <b>${brl(cmp.custoRef)}</b>.
+            </div>
+            <div class="justa-veredito ${barato ? 'bom' : 'ruim'}">
+              ${barato
+                ? `▼ ${brl(-cmp.dif)} mais barato (${pct.toFixed(0)}%)`
+                : `▲ ${brl(cmp.dif)} mais caro (${pct.toFixed(0)}%)`}
+              &middot; melhor preco em ${cmp.vitorias} de ${cmp.comum}
+            </div>
+            ${cmp.soAqui > 0 ? `<div class="justa-nota">${cmp.soAqui} ${cmp.soAqui === 1 ? 'item so aparece' : 'itens so aparecem'} nesta compra e ${cmp.soAqui === 1 ? 'ficou' : 'ficaram'} de fora da comparacao.</div>` : ''}
+          </div>`;
+      }).join('');
+
+      html += `
+        <div class="painel">
+          <h2>Comparacao justa &mdash; mesma cesta</h2>
+          <p class="sub">O total de cada compra nao serve para comparar: a do ${esc(cj.ref.mercado)} foi o estoque inicial, com muito mais itens. Aqui a conta e so sobre os itens que cada compra tem em comum com ela, nas mesmas quantidades.</p>
+          ${cards}
+        </div>
+
+        <div class="painel">
+          <h2>Onde cada mercado e mais barato</h2>
+          <p class="sub">Gasto por categoria em cada compra. A celula verde e o menor preco daquela linha. Categorias que uma compra nao tinha aparecem como &mdash;.</p>
+          ${tabelaComparativa(historico)}
+        </div>
+
+        <div class="painel">
+          <h2>Total desembolsado em cada compra</h2>
+          <p class="sub">Quanto saiu do bolso em cada uma. Sao cestas de tamanhos diferentes (veja a quantidade de itens), entao este numero e so o gasto do dia &mdash; nao serve para dizer qual mercado e mais barato.</p>
+          ${graficoTotais(historico)}
+        </div>`;
+    }
+
+    html += `
+      <div class="painel">
+        <h2>Compras registradas</h2>
+        <p class="sub">Clique no valor real para corrigir.</p>
+        <div class="tabela-rolagem">
+        <table class="hist">
+          <thead>
+            <tr><th>Mercado</th><th>Referencia</th><th class="num">Itens</th><th class="num">Estimado</th><th class="num">Real</th><th class="num">Diferenca</th><th></th></tr>
+          </thead>
+          <tbody>
+            ${[...historico].reverse().map(c => {
+              const dif = c.real != null ? c.real - c.estimado : null;
+              return `<tr>
+                <td><b style="cursor:pointer;text-decoration:underline dotted" onclick="editarMercado(${c.id})"><span class="mseloi" style="background:${corMercado(c.mercado||'')}"></span>${esc(c.mercado || 'informar')}</b></td>
+                <td>${esc(c.mes || '')}<div style="font-size:0.72rem;color:var(--muted)">${new Date(c.data).toLocaleDateString('pt-BR')}</div></td>
+                <td class="num">${c.nItens}</td>
+                <td class="num">${brl(c.estimado)}</td>
+                <td class="num"><span style="cursor:pointer;text-decoration:underline dotted" onclick="editarReal(${c.id})">${c.real != null ? brl(c.real) : 'informar'}</span></td>
+                <td class="num ${dif == null ? '' : (dif > 0 ? 'dif-sobe' : 'dif-desce')}">${dif == null ? '—' : (dif > 0 ? '+' : '') + brl(dif)}</td>
+                <td class="num"><button class="btn danger" style="padding:4px 9px;font-size:0.75rem" onclick="removerCompra(${c.id})">remover</button></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>
+    `;
+  }
+
+  el.innerHTML = html;
+}
+
+/* ================= INICIO ================= */
+document.getElementById('mesRef').value = ler(CHAVE_MES) || '';
+preencherSelectCategorias();
+render();
+</script>
+</body>
+</html>
