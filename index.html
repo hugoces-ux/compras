@@ -4,17 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lista de Compras do Mes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
-    --green:#2F5233; --green-light:#D9E8D4; --bg:#F7F8F5; --card:#FFFFFF;
-    --text:#22301E; --muted:#6b7566; --accent:#C97B2E; --border:#E1E5DC;
-    --red:#A63D40; --blue:#3E6B8A;
+    --green:#2E5A34; --green-deep:#1E3D21; --green-soft:#E4EEDE; --green-light:#D9E8D4;
+    --bg:#ECEFE6; --card:#FFFFFF; --surface-2:#FAFBF7;
+    --text:#1C2A1A; --muted:#6B7566; --accent:#C77D33; --accent-soft:#F6ECDD;
+    --border:#E1E5DC; --line:rgba(28,42,26,0.09);
+    --red:#A23B44; --berry:#A23B44; --leaf:#4C8A52; --blue:#3E6B8A;
+    --sh-sm:0 1px 2px rgba(28,42,26,.06);
+    --sh:0 10px 26px -14px rgba(28,42,26,.24), 0 2px 6px -3px rgba(28,42,26,.10);
+    --sh-lg:0 18px 40px -16px rgba(28,42,26,.32), 0 5px 12px -5px rgba(28,42,26,.14);
+    --r-sm:9px; --r:13px; --r-lg:18px;
+    --ui:'Inter',-apple-system,"Segoe UI",Arial,sans-serif;
+    --display:'Fraunces','Iowan Old Style',Georgia,serif;
+    --ease:cubic-bezier(.4,0,.2,1);
   }
   *{box-sizing:border-box;}
   body{
-    font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    font-family: var(--ui);
     background:var(--bg); color:var(--text); margin:0; padding:0 0 120px 0;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
   }
   header{
     background:var(--green); color:#fff; padding:20px 24px 0;
@@ -329,6 +342,151 @@
     header, .toolbar, footer, .cat-header .cat-toggle-all, .novo-item-card, .abas{display:none !important;}
     body{padding:0;}
     .categoria{border:none; margin:0;}
+  }
+  /* ============================================================
+     CAMADA DE DESIGN — profundidade, tipografia, hover, entrada
+     ============================================================ */
+  body{ background:
+      radial-gradient(1200px 500px at 100% -10%, #E7ECDF 0%, transparent 60%),
+      var(--bg); }
+  ::selection{ background:var(--green-soft); }
+
+  /* numeros tabulares onde ha dinheiro */
+  .ct-val,.ci-val,.kpi .valor,.vp-preco,.merc-chip b,.ti-val,.barra-topo .val,
+  table.hist td.num,table.comparativo td,.resumo b,.podio-card .val,.stk-lab,
+  #totalEstimado,.preco-box input,.qtd-box input{ font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1; }
+
+  /* ---------- header ---------- */
+  header{
+    background:linear-gradient(160deg,#356139 0%, var(--green) 55%, var(--green-deep) 100%);
+    box-shadow:0 10px 30px -18px rgba(28,42,26,.55);
+    border-bottom:1px solid rgba(0,0,0,.08);
+  }
+  header h1{
+    font-family:var(--display); font-weight:600; font-size:1.5rem; letter-spacing:-0.01em;
+    font-optical-sizing:auto; display:flex; align-items:center; gap:9px;
+  }
+  header h1::before{
+    content:""; width:10px; height:22px; border-radius:3px; flex:none;
+    background:linear-gradient(var(--accent),#dda15e); box-shadow:0 0 0 3px rgba(255,255,255,.12);
+  }
+  header p{opacity:.82; font-size:0.83rem; max-width:60ch;}
+  .titulo-mes input{ backdrop-filter:blur(4px); transition:background .2s var(--ease); }
+  .titulo-mes input:focus{ background:rgba(255,255,255,.24); outline:none; }
+
+  /* ---------- abas: controle segmentado ---------- */
+  .abas{ gap:2px; background:rgba(255,255,255,.10); padding:4px; border-radius:12px;
+    margin-top:16px; margin-bottom:14px; width:fit-content; max-width:100%;
+    overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .abas::-webkit-scrollbar{ display:none; }
+  .aba{
+    border-radius:9px; border:none; padding:8px 15px; font-size:0.88rem; font-weight:500;
+    color:rgba(255,255,255,.72); transition:all .22s var(--ease); position:relative;
+    white-space:nowrap; flex:none;
+  }
+  .aba:hover{ color:#fff; background:rgba(255,255,255,.10); }
+  .aba.ativa{
+    color:var(--green-deep); background:#fff; font-weight:600;
+    box-shadow:0 2px 8px -2px rgba(0,0,0,.25); border-bottom:none;
+  }
+
+  /* ---------- toolbar / inputs / botoes ---------- */
+  .toolbar{ position:static; background:rgba(255,255,255,.85); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line); box-shadow:0 1px 0 rgba(255,255,255,.6) inset; }
+  .toolbar input[type=text],.novo-item-form input,.novo-item-form select,.campo input,.campo select{
+    border-radius:10px; border:1px solid var(--border); transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+  .toolbar input[type=text]:focus,.novo-item-form input:focus,.novo-item-form select:focus,
+  .campo input:focus,.campo select:focus,.modal input:focus{
+    outline:none; border-color:var(--green); box-shadow:0 0 0 3px var(--green-soft);
+  }
+  .btn{
+    border-radius:10px; font-weight:500; transition:transform .12s var(--ease), background .18s var(--ease), box-shadow .18s var(--ease), border-color .18s var(--ease);
+    box-shadow:var(--sh-sm);
+  }
+  .btn:hover{ background:var(--green-soft); border-color:#c5d6bd; }
+  .btn:active{ transform:translateY(1px); }
+  .btn:focus-visible{ outline:2px solid var(--green); outline-offset:2px; }
+  .btn.primary{ background:linear-gradient(var(--green),#295030); box-shadow:0 6px 16px -8px rgba(46,90,52,.8); }
+  .btn.primary:hover{ background:linear-gradient(#356139,#234527); }
+  .btn.accent{ background:linear-gradient(var(--accent),#b06a24); box-shadow:0 6px 16px -8px rgba(199,125,51,.75); }
+  .btn.accent:hover{ background:linear-gradient(#d0862f,#a2611f); }
+
+  /* ---------- superficies com profundidade ---------- */
+  .painel,.categoria,.compra-card,.comp-item,.var-item,.justa-card,.podio-card,
+  .kpi,.plano-merc{ box-shadow:var(--sh-sm); transition:box-shadow .22s var(--ease), transform .22s var(--ease), border-color .22s var(--ease); }
+  .painel{ border-radius:var(--r-lg); border-color:var(--line); }
+  .painel:hover{ box-shadow:var(--sh); }
+  .kpi{ border-radius:var(--r); background:linear-gradient(180deg,#fff, #fcfdfa); position:relative; overflow:hidden; }
+  .kpi::before{ content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--green); opacity:.85; }
+  .kpi:hover{ transform:translateY(-2px); box-shadow:var(--sh); }
+  .kpi .valor{ font-family:var(--display); font-weight:600; font-optical-sizing:auto; letter-spacing:-0.01em; }
+
+  /* cards clicaveis/analiticos: leve elevacao no hover */
+  .comp-item:hover,.var-item:hover,.compra-card:hover,.justa-card:hover,.podio-card:hover{
+    transform:translateY(-2px); box-shadow:var(--sh);
+  }
+
+  /* rotulos: fora do CAIXA ALTA, viram etiquetas discretas */
+  .kpi .rotulo,.col-tit{ text-transform:none; letter-spacing:0; font-size:0.78rem; color:var(--muted); font-weight:500; }
+
+  /* titulos de painel com a serifa de exibicao */
+  .painel h2{ font-family:var(--display); font-weight:600; font-size:1.08rem; letter-spacing:-0.01em; color:var(--green-deep); font-optical-sizing:auto; }
+
+  /* ---------- lista: linhas com resposta ao hover ---------- */
+  .cat-header{ transition:background .18s var(--ease); }
+  .cat-header:hover{ filter:brightness(.98); }
+  .item-row{ transition:background .15s var(--ease); border-radius:8px; }
+  .item-row:hover{ background:var(--surface-2); }
+  .qtd-box button,.preco-box input{ transition:all .15s var(--ease); }
+  .qtd-box button:hover{ background:var(--green-soft); border-color:#c5d6bd; }
+  .qtd-box button:active{ transform:scale(.9); }
+  .tag-barato{ transition:transform .15s var(--ease); }
+  .item-row:hover .tag-barato{ transform:translateX(2px); }
+
+  /* ---------- chips / pontos ---------- */
+  .merc-chip{ transition:transform .15s var(--ease), box-shadow .15s var(--ease); }
+  .merc-chip.melhor{ box-shadow:0 2px 8px -3px rgba(63,122,74,.5); }
+  .comp-item:hover .merc-chip.melhor{ transform:translateY(-1px); }
+  .var-ponto{ transition:transform .15s var(--ease), box-shadow .18s var(--ease); }
+  .var-ponto:hover{ transform:translateY(-2px); box-shadow:var(--sh-sm); }
+
+  /* ---------- tabelas ---------- */
+  table.hist tbody tr,table.comparativo tbody tr{ transition:background .15s var(--ease); }
+  table.hist tbody tr:hover,table.comparativo tbody tr:hover{ background:var(--surface-2); }
+  table.comparativo td.barato{ box-shadow:inset 0 0 0 1px #cfe3cf; }
+
+  /* ---------- barras (grafico horizontal) ---------- */
+  .barra-preenche{ position:relative; border-radius:5px;
+    animation:crescerBarra .7s var(--ease) both; transform-origin:left center; }
+  .barra-trilho{ background:#EEF1E9; }
+  @keyframes crescerBarra{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+  .stk-bar{ box-shadow:var(--sh-sm) inset; }
+  .stk-seg{ transition:filter .15s var(--ease); }
+  .stk-seg:hover{ filter:brightness(1.08) saturate(1.1); }
+
+  /* SVG: barras e pontos reagem ao hover */
+  svg.grafico rect,svg.grafico circle{ transition:opacity .15s var(--ease); }
+  svg.grafico:hover rect{ opacity:.92; }
+  svg.grafico rect:hover{ opacity:1; }
+
+  /* ---------- entrada suave ao trocar de aba (um momento so) ---------- */
+  #view-lista,#view-comparador,#view-variacao,#view-painel{ animation:entrar .32s var(--ease) both; }
+  @keyframes entrar{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none;} }
+
+  /* ---------- rodape ---------- */
+  footer{ background:rgba(255,255,255,.92); backdrop-filter:blur(10px); border-top:1px solid var(--line); }
+  .resumo b{ font-family:var(--display); font-weight:600; }
+
+  /* ---------- modal ---------- */
+  .modal{ border-radius:var(--r-lg); box-shadow:var(--sh-lg); animation:modalUp .25s var(--ease) both; }
+  @keyframes modalUp{ from{ opacity:0; transform:translateY(10px) scale(.98);} to{ opacity:1; transform:none;} }
+  .modal h3{ font-family:var(--display); font-weight:600; }
+
+  /* respeito a quem prefere menos movimento */
+  @media (prefers-reduced-motion:reduce){
+    .barra-preenche,#view-lista,#view-comparador,#view-variacao,#view-painel,.modal{ animation:none !important; }
+    *{ transition:none !important; }
   }
 </style>
 </head>
