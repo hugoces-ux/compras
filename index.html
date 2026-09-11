@@ -225,6 +225,27 @@
   .comp-econ{color:#3f7a4a;}
   .comp-uni{color:var(--muted);}
 
+  /* variacao */
+  .var-lista{display:flex; flex-direction:column; gap:10px; margin-top:14px;}
+  .var-item{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px 14px;}
+  .var-topo{display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:10px;}
+  .var-nome{font-weight:600; font-size:0.92rem; color:var(--text);}
+  .var-tag{font-size:0.8rem; font-weight:600; white-space:nowrap;}
+  .var-tag.sobe{color:var(--red);}
+  .var-tag.desce{color:#3f7a4a;}
+  .var-tag.igual{color:var(--muted);}
+  .var-linha{display:flex; align-items:stretch; gap:6px; flex-wrap:wrap;}
+  .var-ponto{border:1px solid var(--border); border-radius:8px; padding:6px 10px; background:var(--bg); min-width:96px;}
+  .var-ponto.min{background:#EAF3EA; border-color:#cfe3cf;}
+  .var-ponto.max{background:#FBF3F3; border-color:#e8cfd0;}
+  .vp-merc{font-size:0.76rem; color:var(--text); display:flex; align-items:center;}
+  .vp-data{font-size:0.68rem; color:var(--muted); margin:1px 0 2px;}
+  .vp-preco{font-size:0.95rem; font-weight:700; color:var(--text);}
+  .var-ponto.min .vp-preco{color:#2f5233;}
+  .var-ponto.max .vp-preco{color:var(--red);}
+  .var-seta{display:flex; align-items:center; color:var(--muted); font-size:1.1rem;}
+  .var-rodape{font-size:0.76rem; color:var(--muted); margin-top:9px;}
+
   /* cesta otimizada */
   .otim-destaque{font-size:0.9rem; line-height:1.55; color:var(--text); background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:12px 14px; margin-bottom:14px;}
   .otim-destaque.ganho{background:#F1F7F1; border-color:#cfe3cf;}
@@ -322,6 +343,7 @@
   <div class="abas">
     <button class="aba ativa" id="aba-lista" onclick="trocarAba('lista')">Lista</button>
     <button class="aba" id="aba-comparador" onclick="trocarAba('comparador')">Comparador</button>
+    <button class="aba" id="aba-variacao" onclick="trocarAba('variacao')">Variacao</button>
     <button class="aba" id="aba-painel" onclick="trocarAba('painel')">Painel</button>
   </div>
 </header>
@@ -387,6 +409,22 @@
   </div>
   <main>
     <div id="comparador"></div>
+  </main>
+</div>
+
+<!-- ================= VARIACAO ================= -->
+<div id="view-variacao" class="hidden">
+  <div class="toolbar">
+    <input type="text" id="buscaVar" placeholder="Buscar produto...">
+    <select id="ordemVar" class="btn">
+      <option value="variacao">Maior variacao</option>
+      <option value="subiu">Mais subiu</option>
+      <option value="desceu">Mais caiu</option>
+      <option value="nome">Nome (A-Z)</option>
+    </select>
+  </div>
+  <main>
+    <div id="variacao"></div>
   </main>
 </div>
 
@@ -479,7 +517,7 @@ let abaAtual = 'lista';
 /* ============ COMPRAS JA REGISTRADAS (mantidas no arquivo) ============
    A lista principal e a compra 1, feita no Assai. Quando entrar uma nova
    compra (ex.: pela notinha), ela e adicionada aqui e a versao abaixo sobe.  */
-const SEED_VERSAO = 'v4-guanabara';
+const SEED_VERSAO = 'v5-compra3';
 
 function compraAssaiInicial(){
   const itens = ITEMS.map(it => ({desc:it.desc, cat:it.cat, qtd:it.qtd, un:it.un, preco:it.preco, key:it.key}));
@@ -500,7 +538,8 @@ function compraAssaiInicial(){
 }
 
 const COMPRA_MUNDIAL = {"id":2,"mercado":"Guanabara","mes":"Agosto/2026","data":"2026-08-08T11:14:21.000Z","estimado":1376.07,"real":1376.08,"nItens":75,"porCategoria":{"Mercearia":194.91,"Doces e Snacks":97.46,"Laticínios e Frios":84.66,"Bazar e Utilidades":50.56,"Higiene Pessoal":147.46,"Limpeza":140.12,"Bebidas":110.46,"Congelados":35.96,"Carnes e Aves":514.48},"itens":[{"desc":"Feijao Preto Combrasil 1kg","cat":"Mercearia","qtd":3,"un":"Un","preco":6.79,"key":"feijao preto 1000g"},{"desc":"Milho de Pipoca Yoki Micro Manteiga 100g","cat":"Mercearia","qtd":2,"un":"Un","preco":3.99,"key":"milho pipoca yoki micro 100g"},{"desc":"Milho de Pipoca Yoki Micro Caramelo 160g","cat":"Mercearia","qtd":1,"un":"Un","preco":6.69,"key":"milho pipoca yoki micro 160g"},{"desc":"Milho de Pipoca Yoki Micro Toque Chef 100g","cat":"Mercearia","qtd":1,"un":"Un","preco":3.99,"key":"milho pipoca yoki micro 100g"},{"desc":"Chocolate Nestle Duo Cookie 150g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":13.15,"key":"chocolate nestle duo cookie 150g"},{"desc":"Chocolate Branco Lacta Laka 145g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":12.99,"key":"chocolate branco lacta laka 145g"},{"desc":"Farinha de Rosca Granfino 500g","cat":"Mercearia","qtd":1,"un":"Un","preco":5.58,"key":"farinha de rosca 500g"},{"desc":"Tapioca da Terrinha 500g","cat":"Mercearia","qtd":3,"un":"Un","preco":7.38,"key":"tapioca 500g"},{"desc":"Sal Domestico Cisne 1kg","cat":"Mercearia","qtd":1,"un":"Un","preco":3.79,"key":"sal 1000g"},{"desc":"Arroz Arborio Pilecco 1kg","cat":"Mercearia","qtd":1,"un":"Un","preco":17.8,"key":"arroz arborio 1000g"},{"desc":"Molho Tare Sakura 180ml","cat":"Mercearia","qtd":1,"un":"Un","preco":7.99,"key":"molho tare sakura 180ml"},{"desc":"Chocolate Lacta Bis Branco 201,6g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":10.99,"key":"chocolate lacta bis branco 202g"},{"desc":"Farofa Bom Gosto Caseira 900g","cat":"Mercearia","qtd":1,"un":"Un","preco":18.99,"key":"farofa bom gosto caseira 900g"},{"desc":"Vinagre de Alcool Peixe 750ml","cat":"Mercearia","qtd":1,"un":"Un","preco":2.29,"key":"vinagre 750ml"},{"desc":"Mel Melbras 220g","cat":"Mercearia","qtd":1,"un":"Un","preco":16.3,"key":"mel melbras 220g"},{"desc":"Milho Verde Pramesa Lata 170g","cat":"Mercearia","qtd":2,"un":"Un","preco":2.79,"key":"milho verde pramesa lata 170g"},{"desc":"Batata Ruffles Sour Cream 100g","cat":"Doces e Snacks","qtd":2,"un":"Un","preco":10.99,"key":"batata ruffles sour cream 100g"},{"desc":"Oleo de Soja Liza 900ml","cat":"Mercearia","qtd":1,"un":"Un","preco":7.29,"key":"oleo de soja 900ml"},{"desc":"Manteiga Itambe c/Sal 200g","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":11.17,"key":"manteiga itambe sal 200g"},{"desc":"Espiral Jimo c/10un","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":8.63,"key":"espiral jimo 10un c10"},{"desc":"Queijo Parmesao Quata Fracionado","cat":"Laticínios e Frios","qtd":0.156,"un":"Kg","preco":138.46,"key":"queijo parmesao"},{"desc":"Arroz Tio Joao Tipo1 5kg","cat":"Mercearia","qtd":1,"un":"Un","preco":27.95,"key":"arroz 5000g"},{"desc":"Leite Condensado Italac 395g","cat":"Laticínios e Frios","qtd":3,"un":"Un","preco":4.99,"key":"leite condensado 395g"},{"desc":"Ketchup Hemmer Tradicional 750ml","cat":"Mercearia","qtd":1,"un":"Un","preco":14.9,"key":"ketchup hemmer tradicional 750ml"},{"desc":"Creme de Leite Italac 200g","cat":"Laticínios e Frios","qtd":5,"un":"Un","preco":1.99,"key":"creme de leite 200g"},{"desc":"Biscoito Piraque Rec Chocolate 160g","cat":"Doces e Snacks","qtd":2,"un":"Un","preco":3.75,"key":"biscoito piraque rec chocolate 160g"},{"desc":"Sabonete Nivea Karite Lima 80g","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":3.49,"key":"sabonete nivea karite lima 80g"},{"desc":"Sabonete Nivea Abacate Camomila 80g","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":3.49,"key":"sabonete nivea abacate camomila 80g"},{"desc":"Macarrao Galo Semola Ninho N2 500g","cat":"Mercearia","qtd":1,"un":"Un","preco":5.28,"key":"macarrao galo semola ninho 500g"},{"desc":"Toalha Umedecida Piquitucho c/96","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":9.98,"key":"toalha umedecida piquitucho c96"},{"desc":"Esponja Bombril Sintetica Multiuso L4P3","cat":"Limpeza","qtd":1,"un":"Un","preco":5.69,"key":"esponja bombril sintetica multiuso l4p3"},{"desc":"Detergente Sanitario Hippo Gel Adesivo Citrus 38g","cat":"Limpeza","qtd":1,"un":"Un","preco":16.61,"key":"detergente 38g"},{"desc":"Sabonete Phebo Odor Rosas 90g","cat":"Higiene Pessoal","qtd":12,"un":"Un","preco":3.79,"key":"sabonete phebo odor rosas 90g"},{"desc":"Inseticida Raid Multi Base Agua 420ml","cat":"Limpeza","qtd":1,"un":"Un","preco":15.9,"key":"inseticida raid multi base 420ml"},{"desc":"Desinfetante Pinho Bril Perf c/Lavanda 1,75L","cat":"Limpeza","qtd":1,"un":"Un","preco":15.9,"key":"desinfetante pinho bril perf 1750ml"},{"desc":"Saco de Lixo Koleta Black 15L c/100un","cat":"Limpeza","qtd":1,"un":"Un","preco":17.4,"key":"saco lixo koleta black 15000ml"},{"desc":"Sabonete Nivea Oleo Jojoba Framboesa 80g","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":3.49,"key":"sabonete nivea oleo jojoba 80g"},{"desc":"Sabonete Granado Enxofre 90g","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":7.89,"key":"sabonete granado enxofre 90g"},{"desc":"Sabonete Nivea Pure Milk 90g","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":3.49,"key":"sabonete nivea pure milk 90g"},{"desc":"Sabonete Nivea Cacau Jasmim 80g","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":3.49,"key":"sabonete nivea cacau jasmim 80g"},{"desc":"Limpador Secar Concentrado Perfumado 120ml","cat":"Limpeza","qtd":1,"un":"Un","preco":8.9,"key":"limpador secar concentrado perfumado 120ml"},{"desc":"Desodorante Rexona Men Aerosol 250ml","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":20.6,"key":"desodorante rexona men aerosol 250ml"},{"desc":"Limpador Uau Pes Alta Perfumacao 500ml","cat":"Limpeza","qtd":1,"un":"Un","preco":5.99,"key":"limpador uau pes alta 500ml"},{"desc":"Sabonete Phebo Patchouly 90g","cat":"Higiene Pessoal","qtd":3,"un":"Un","preco":3.79,"key":"sabonete phebo patchouly 90g"},{"desc":"Amaciante Downy Concentrado Alfazema 1L","cat":"Limpeza","qtd":1,"un":"Un","preco":17.5,"key":"amaciante downy concentrado alfazema 1000ml"},{"desc":"Agua Sanitaria Vex 5L","cat":"Limpeza","qtd":1,"un":"Un","preco":9.97,"key":"agua sanitaria 5000ml"},{"desc":"Agua Mineral Donna 1,5L","cat":"Bebidas","qtd":18,"un":"Un","preco":2.28,"key":"agua mineral 1500ml"},{"desc":"Refrigerante Coca-Cola Sem Acucar 200ml","cat":"Bebidas","qtd":12,"un":"Un","preco":1.89,"key":"refrigerante coca cola acucar 200ml"},{"desc":"Refrigerante Coca-Cola Zero 1,5L","cat":"Bebidas","qtd":6,"un":"Un","preco":7.79,"key":"refrigerante coca cola zero 1500ml"},{"desc":"Alcool Liquido Montenegro 46 1L","cat":"Limpeza","qtd":1,"un":"Un","preco":7.99,"key":"alcool 1000ml"},{"desc":"Saponaceo Cif Cremoso Original 250ml","cat":"Limpeza","qtd":2,"un":"Un","preco":7.99,"key":"saponaceo cif cremoso original 250ml"},{"desc":"Escova de Dente Colgate Premier Clean","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":2.99,"key":"escova dente colgate premier"},{"desc":"Esponja de Aco Bombril 45g c/6un","cat":"Limpeza","qtd":1,"un":"Un","preco":2.29,"key":"esponja aco bombril 45g"},{"desc":"Massa de Pastel Napoles Medio 400g","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":6.99,"key":"massa pastel napoles medio 400g"},{"desc":"Margarina Qualy 1kg","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":19.98,"key":"margarina qualy 1000g"},{"desc":"Absorvente Intimus Antibacteriano c/28","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":14.25,"key":"absorvente intimus antibacteriano c28"},{"desc":"Batata Palha Yoki 380g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":19.9,"key":"batata palha yoki 380g"},{"desc":"Cheetos Elma Chips Onda 160g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":10.95,"key":"cheetos elma chips onda 160g"},{"desc":"Batata Bobs Croc Palito Congelada 1,05kg","cat":"Congelados","qtd":1,"un":"Un","preco":16.98,"key":"batata bobs croc palito 1050g"},{"desc":"Bife Copa Lombo Suino Seara","cat":"Carnes e Aves","qtd":1.622,"un":"Kg","preco":28.98,"key":"copa lombo"},{"desc":"File de Coxa c/Sobrecoxa Rivelli","cat":"Carnes e Aves","qtd":3,"un":"Un","preco":17.98,"key":"coxa"},{"desc":"Acem Bovino Moido","cat":"Carnes e Aves","qtd":1.014,"un":"Kg","preco":50.49,"key":"acem"},{"desc":"Bife Alcatra Bovino Friboi","cat":"Carnes e Aves","qtd":1.076,"un":"Kg","preco":65.98,"key":"alcatra"},{"desc":"Embutido Levissimo Seara","cat":"Carnes e Aves","qtd":0.126,"un":"Kg","preco":33.89,"key":"embutido levissimo seara"},{"desc":"Sacola Retornavel TNT 40x43","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":6.25,"key":"sacola retornavel tnt"},{"desc":"Acem Bovino Moido","cat":"Carnes e Aves","qtd":1.582,"un":"Kg","preco":50.49,"key":"acem"},{"desc":"Frango a Passarinho Sadia IQF","cat":"Carnes e Aves","qtd":2,"un":"Un","preco":13.99,"key":"frango a passarinho"},{"desc":"Fraldinha Bovina","cat":"Carnes e Aves","qtd":1.674,"un":"Kg","preco":39.98,"key":"fraldinha"},{"desc":"File de Frango Cancao 1kg","cat":"Carnes e Aves","qtd":2,"un":"Un","preco":15.47,"key":"file de frango 1000g"},{"desc":"Alho Easychef Congelado 1,1kg","cat":"Congelados","qtd":1,"un":"Un","preco":18.98,"key":"alho easychef congelado 1100g"},{"desc":"Paleta Bovina Friboi","cat":"Carnes e Aves","qtd":0.582,"un":"Kg","preco":41.98,"key":"paleta"},{"desc":"Peito Bovino Friboi","cat":"Carnes e Aves","qtd":0.682,"un":"Kg","preco":41.98,"key":"peito bovino"},{"desc":"Carne Seca Precioso","cat":"Carnes e Aves","qtd":0.602,"un":"Kg","preco":46.99,"key":"carne seca"},{"desc":"Toalha de Papel Absoluto 240fl 2rolos","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":9.7,"key":"toalha de papel 240fl 2rol"},{"desc":"Papel Higienico Neve 20m L16","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":25.98,"key":"papel higienico neve l16"}]};
-const COMPRAS_INICIAIS = [ compraAssaiInicial(), COMPRA_MUNDIAL ];
+const COMPRA_3 = {"id":3,"mercado":"Guanabara","mes":"Setembro/2026","data":"2026-09-10T21:48:29.000Z","estimado":1304.45,"real":1304.45,"nItens":64,"porCategoria":{"Limpeza":159.49,"Laticínios e Frios":106.51,"Higiene Pessoal":65.26,"Bazar e Utilidades":17.26,"Carnes e Aves":558.09,"Congelados":36.96,"Mercearia":187.05,"Bebidas":103.56,"Doces e Snacks":70.27},"itens":[{"desc":"Limpador Veja Multiuso Original 500ml","cat":"Limpeza","qtd":2,"un":"Un","preco":3.99,"key":"limpador veja multiuso original 500ml"},{"desc":"Agua Sanitaria Vex 5L","cat":"Limpeza","qtd":1,"un":"Un","preco":9.97,"key":"agua sanitaria 5000ml"},{"desc":"Iogurte Liquido Itambe Morango 1150g","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":14.49,"key":"iogurte liquido itambe morango 1150g"},{"desc":"Lava Roupas Liquido Odd Intense Repair 3L","cat":"Limpeza","qtd":1,"un":"Un","preco":19.77,"key":"lava roupas liquido odd 3000ml"},{"desc":"Esponja Bombril Sintetica Multiuso L4P3","cat":"Limpeza","qtd":1,"un":"Un","preco":5.69,"key":"esponja bombril sintetica multiuso l4p3"},{"desc":"Detergente Sanitario Pato Gel Adesivo 38g","cat":"Limpeza","qtd":1,"un":"Un","preco":15.65,"key":"detergente 38g"},{"desc":"Curativo Band-Aid Transparente c/10un","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":8.33,"key":"curativo band aid transparente 10un c10"},{"desc":"Toalha Umedecida Piquitucho c/48","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":5.99,"key":"toalha umedecida piquitucho c48"},{"desc":"Creme Dental Colgate Luminous White 70g","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":9.19,"key":"creme dental colgate luminous 70g"},{"desc":"Cotonetes Johnson Haste Flexivel c/75un","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":5.79,"key":"cotonetes johnson haste flexivel 75un c75"},{"desc":"Acendedor Fiat Lux a Alcool","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":12.29,"key":"alcool"},{"desc":"Saponaceo Cif Cremoso 360ml","cat":"Limpeza","qtd":1,"un":"Un","preco":10.38,"key":"saponaceo cif cremoso 360ml"},{"desc":"Limpa Box Uau 200ml","cat":"Limpeza","qtd":1,"un":"Un","preco":12.49,"key":"limpa box uau 200ml"},{"desc":"Odorizador de Ambiente Glade Aerosol 360ml","cat":"Limpeza","qtd":1,"un":"Un","preco":14.98,"key":"odorizador ambiente glade aerosol 360ml"},{"desc":"Alcool Liquido Montenegro 46 1L","cat":"Limpeza","qtd":2,"un":"Un","preco":7.99,"key":"alcool 1000ml"},{"desc":"Desodorante Axe Aerosol Dark Temptation 150ml","cat":"Higiene Pessoal","qtd":2,"un":"Un","preco":7.99,"key":"desodorante axe aerosol dark 150ml"},{"desc":"Limpador Secar Concentrado Orquideas Caribe 120ml","cat":"Limpeza","qtd":1,"un":"Un","preco":8.9,"key":"limpador secar concentrado orquideas 120ml"},{"desc":"Shampoo Pantene Bambu 400ml","cat":"Higiene Pessoal","qtd":1,"un":"Un","preco":19.98,"key":"shampoo pantene bambu 400ml"},{"desc":"Sacola Plastica 40x53","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":0.08,"key":"sacola plastica"},{"desc":"Acem Bovino Moido","cat":"Carnes e Aves","qtd":2.122,"un":"Kg","preco":50.49,"key":"acem"},{"desc":"Bife Alcatra Bovino Friboi","cat":"Carnes e Aves","qtd":1.64,"un":"Kg","preco":65.98,"key":"alcatra"},{"desc":"Alho Easychef Congelado 1,1kg","cat":"Congelados","qtd":1,"un":"Un","preco":18.98,"key":"alho easychef congelado 1100g"},{"desc":"File de Coxa c/Sobrecoxa Rivelli 1kg","cat":"Carnes e Aves","qtd":3,"un":"Un","preco":14.98,"key":"coxa 1000g"},{"desc":"File de Frango Cancao 1kg","cat":"Carnes e Aves","qtd":3,"un":"Un","preco":15.98,"key":"file de frango 1000g"},{"desc":"Paleta Bovina Friboi Porcionada","cat":"Carnes e Aves","qtd":1.598,"un":"Kg","preco":29.97,"key":"paleta"},{"desc":"Paleta Bovina Friboi Porcionada","cat":"Carnes e Aves","qtd":1.21,"un":"Kg","preco":29.97,"key":"paleta"},{"desc":"Picanha Bovina Friboi Maturatta","cat":"Carnes e Aves","qtd":1.494,"un":"Kg","preco":88.9,"key":"picanha"},{"desc":"Batata Bem Brasil Chips s/Casca Congelada 1,5kg","cat":"Congelados","qtd":1,"un":"Un","preco":17.98,"key":"batata bem brasil chips 1500g"},{"desc":"Carne Seca Pirambu","cat":"Carnes e Aves","qtd":0.7,"un":"Kg","preco":46.99,"key":"carne seca"},{"desc":"Mistura para Bolo Fleischmann Chocolate 400g","cat":"Mercearia","qtd":2,"un":"Un","preco":8.56,"key":"mistura para bolo fleischmann 400g"},{"desc":"Margarina Qualy 1kg","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":15.98,"key":"margarina qualy 1000g"},{"desc":"Requeijao Itambe Cremoso Tradicional 400g","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":15.99,"key":"requeijao itambe cremoso tradicional 400g"},{"desc":"Farinha de Trigo Rosa Branca c/Ferro 1kg","cat":"Mercearia","qtd":2,"un":"Un","preco":4.1,"key":"farinha de trigo 1000g"},{"desc":"Tapioca da Terrinha 500g","cat":"Mercearia","qtd":4,"un":"Un","preco":7.38,"key":"tapioca 500g"},{"desc":"Milho Verde Pramesa Lata 170g","cat":"Mercearia","qtd":1,"un":"Un","preco":2.79,"key":"milho verde pramesa lata 170g"},{"desc":"Fermento em Po Quimico Royal 100g","cat":"Mercearia","qtd":1,"un":"Un","preco":5.3,"key":"fermento 100g"},{"desc":"Acucar Guarani Refinado 1kg","cat":"Mercearia","qtd":3,"un":"Un","preco":2.79,"key":"acucar 1000g"},{"desc":"Arroz Tio Joao Tipo1 1kg","cat":"Mercearia","qtd":2,"un":"Un","preco":5.79,"key":"arroz 1000g"},{"desc":"Feijao Preto Super Maximo 1kg","cat":"Mercearia","qtd":1,"un":"Un","preco":6.39,"key":"feijao preto 1000g"},{"desc":"Queijo Parmesao Quata Fracionado","cat":"Laticínios e Frios","qtd":0.158,"un":"Kg","preco":128.86,"key":"queijo parmesao"},{"desc":"Passata Ottima Pure de Tomate 680g","cat":"Mercearia","qtd":2,"un":"Un","preco":11.9,"key":"passata ottima pure tomate 680g"},{"desc":"Pipoca de Micro-ondas Yoki Cheddar 95g","cat":"Mercearia","qtd":1,"un":"Un","preco":5.29,"key":"pipoca micro ondas yoki 95g"},{"desc":"Milho de Pipoca Yoki Micro Cob s/Manteiga 105g","cat":"Mercearia","qtd":2,"un":"Un","preco":6.49,"key":"milho pipoca yoki micro 105g"},{"desc":"Milho de Pipoca Yoki Micro c/Sal 100g","cat":"Mercearia","qtd":3,"un":"Un","preco":3.09,"key":"sal 100g"},{"desc":"Leite Longa Vida Elege Integral 1L","cat":"Laticínios e Frios","qtd":1,"un":"Un","preco":4.79,"key":"leite longa vida elege 1000ml"},{"desc":"Creme de Leite Piracanjuba 200g","cat":"Laticínios e Frios","qtd":5,"un":"Un","preco":1.99,"key":"creme de leite 200g"},{"desc":"Leite Condensado Italac 395g","cat":"Laticínios e Frios","qtd":5,"un":"Un","preco":4.99,"key":"leite condensado 395g"},{"desc":"Fosforo Fiat Lux c/200un","cat":"Bazar e Utilidades","qtd":1,"un":"Un","preco":4.89,"key":"fosforo fiat lux 200un c200"},{"desc":"Ovos Brancos Grandes Casbri c/20un","cat":"Mercearia","qtd":1,"un":"Un","preco":11.98,"key":"ovos brancos grandes casbri 20un c20"},{"desc":"Oleo de Soja Soya 900ml","cat":"Mercearia","qtd":1,"un":"Un","preco":6.99,"key":"oleo de soja 900ml"},{"desc":"Refrigerante Coca-Cola Zero 1,5L","cat":"Bebidas","qtd":6,"un":"Un","preco":7.69,"key":"refrigerante coca cola zero 1500ml"},{"desc":"Cha Preto Lipton Pessego 1,5L","cat":"Bebidas","qtd":6,"un":"Un","preco":4.99,"key":"cha preto lipton pessego 1500ml"},{"desc":"Agua Mineral Lindoya Natural s/Gas 1,5L","cat":"Bebidas","qtd":12,"un":"Un","preco":2.29,"key":"agua mineral 1500ml"},{"desc":"Chocobiscuit Bauducco Meio Amargo 80g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":6.99,"key":"chocobiscuit bauducco meio amargo 80g"},{"desc":"Molho Tare Sakura 180ml","cat":"Mercearia","qtd":1,"un":"Un","preco":7.99,"key":"molho tare sakura 180ml"},{"desc":"Biscoito Piraque Wafer Rec Chocolate 100g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":2.98,"key":"biscoito piraque wafer rec 100g"},{"desc":"Biscoito Piraque Wafer Rec Branco 100g","cat":"Doces e Snacks","qtd":2,"un":"Un","preco":2.98,"key":"biscoito piraque wafer rec 100g"},{"desc":"Cookie Bauducco Original 100g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":4.49,"key":"cookie bauducco original 100g"},{"desc":"Panetini Equilibri Presunto/Defumado 40g","cat":"Doces e Snacks","qtd":4,"un":"Un","preco":3.69,"key":"panetini equilibri presunto defumado 40g"},{"desc":"Saco de Lixo Embalixo Mega Eco 100L","cat":"Limpeza","qtd":1,"un":"Un","preco":37.7,"key":"saco lixo embalixo mega 100000ml"},{"desc":"Biscoito Piraque Maizena 175g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":2.99,"key":"biscoito piraque maizena 175g"},{"desc":"Batata Palha Mine Foods Tradicional 200g","cat":"Doces e Snacks","qtd":1,"un":"Un","preco":13.1,"key":"batata palha mine foods 200g"},{"desc":"Batata Ruffles Sour Cream 100g","cat":"Doces e Snacks","qtd":2,"un":"Un","preco":9.5,"key":"batata ruffles sour cream 100g"},{"desc":"Mostarda Hemmer Amarela 700g","cat":"Mercearia","qtd":1,"un":"Un","preco":19.48,"key":"mostarda hemmer amarela 700g"}]};
+const COMPRAS_INICIAIS = [ compraAssaiInicial(), COMPRA_MUNDIAL, COMPRA_3 ];
 
 let historico = ler(CHAVE_HIST) || [];
 // as compras mantidas no arquivo (COMPRAS_INICIAIS) sao injetadas/atualizadas uma vez por versao;
@@ -635,12 +674,15 @@ function trocarAba(aba){
   document.getElementById('view-lista').classList.toggle('hidden', aba !== 'lista');
   document.getElementById('view-painel').classList.toggle('hidden', aba !== 'painel');
   document.getElementById('view-comparador').classList.toggle('hidden', aba !== 'comparador');
+  document.getElementById('view-variacao').classList.toggle('hidden', aba !== 'variacao');
   document.getElementById('aba-lista').classList.toggle('ativa', aba === 'lista');
   document.getElementById('aba-painel').classList.toggle('ativa', aba === 'painel');
   document.getElementById('aba-comparador').classList.toggle('ativa', aba === 'comparador');
+  document.getElementById('aba-variacao').classList.toggle('ativa', aba === 'variacao');
   document.getElementById('rodape-resumo').classList.toggle('hidden', aba !== 'lista');
   if(aba === 'painel') renderDash();
   if(aba === 'comparador') renderComparador();
+  if(aba === 'variacao') renderVariacao();
   window.scrollTo(0,0);
 }
 
@@ -800,6 +842,8 @@ document.getElementById('mesRef').addEventListener('input', salvar);
 document.getElementById('buscaComp').addEventListener('input', renderComparador);
 document.getElementById('ordemComp').addEventListener('change', renderComparador);
 document.getElementById('soComparaveis').addEventListener('change', renderComparador);
+document.getElementById('buscaVar').addEventListener('input', renderVariacao);
+document.getElementById('ordemVar').addEventListener('change', renderVariacao);
 
 /* ================= EXPORTAR ================= */
 function listaFinal(){
@@ -1271,6 +1315,112 @@ function dadosComparador(){
       ultimaData
     };
   });
+}
+
+// produtos presentes em 2+ COMPRAS distintas, com o valor em cada compra e a variacao
+function dadosVariacao(){
+  const mapa = {};
+  historico.forEach(c => {
+    (c.itens || []).forEach(it => {
+      if(it.preco == null) return;
+      const k = keyOf(it);
+      if(!mapa[k]) mapa[k] = {key:k, cat:it.cat, nomes:{}, entradas:{}};
+      mapa[k].nomes[nomeLimpoProduto(it.desc)] = (mapa[k].nomes[nomeLimpoProduto(it.desc)]||0)+1;
+      // por compra: menor preco daquele item na compra
+      const e = mapa[k].entradas[c.id];
+      if(!e || it.preco < e.preco) mapa[k].entradas[c.id] = {compraId:c.id, mercado:c.mercado||c.mes||'compra', data:c.data, mes:c.mes, preco:it.preco};
+    });
+  });
+  return Object.values(mapa)
+    .map(p => {
+      const pontos = Object.values(p.entradas).sort((a,b)=> (a.data||'').localeCompare(b.data||''));
+      const primeiro = pontos[0], ultimo = pontos[pontos.length-1];
+      const precos = pontos.map(x=>x.preco);
+      const min = Math.min(...precos), max = Math.max(...precos);
+      const menor = pontos.find(x=>x.preco===min), maior = pontos.find(x=>x.preco===max);
+      const nome = Object.keys(p.nomes).sort((a,b)=> a.length-b.length)[0];
+      return {
+        key:p.key, nome, cat:p.cat, pontos, nCompras: pontos.length,
+        primeiro, ultimo, min, max, menor, maior,
+        varAbs: ultimo.preco - primeiro.preco,
+        varPct: primeiro.preco>0 ? (ultimo.preco - primeiro.preco)/primeiro.preco*100 : 0,
+        spread: max - min
+      };
+    })
+    .filter(p => p.nCompras >= 2);
+}
+
+function _dataCurta(iso){
+  try { const d = new Date(iso); return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}); }
+  catch(e){ return ''; }
+}
+
+function renderVariacao(){
+  const el = document.getElementById('variacao');
+  if(historico.length < 2){
+    el.innerHTML = `<div class="painel"><div class="vazio"><b>Poucas compras ainda</b>Esta aba compara o preco de um mesmo produto entre compras diferentes. Feche pelo menos duas compras para ela ganhar vida.</div></div>`;
+    return;
+  }
+  let dados = dadosVariacao();
+  const subiram = dados.filter(p=>p.varAbs > 0.001).length;
+  const desceram = dados.filter(p=>p.varAbs < -0.001).length;
+
+  const termo = (document.getElementById('buscaVar').value||'').trim().toLowerCase();
+  const ordem = document.getElementById('ordemVar').value;
+  let lista = dados.slice();
+  if(termo) lista = lista.filter(p => p.nome.toLowerCase().includes(termo) || p.cat.toLowerCase().includes(termo));
+  lista.sort((a,b)=>{
+    if(ordem==='nome') return a.nome.localeCompare(b.nome);
+    if(ordem==='subiu') return b.varAbs - a.varAbs;
+    if(ordem==='desceu') return a.varAbs - b.varAbs;
+    return Math.abs(b.varAbs) - Math.abs(a.varAbs); // maior variacao
+  });
+
+  let html = `
+    <div class="kpis" style="margin-top:14px">
+      <div class="kpi"><div class="rotulo">Produtos com historico</div><div class="valor">${dados.length}</div><div class="nota">em 2+ compras</div></div>
+      <div class="kpi"><div class="rotulo">Subiram de preco</div><div class="valor" style="color:var(--red)">${subiram}</div><div class="nota">da 1a para a ultima compra</div></div>
+      <div class="kpi"><div class="rotulo">Cairam de preco</div><div class="valor" style="color:#3f7a4a">${desceram}</div><div class="nota">da 1a para a ultima compra</div></div>
+    </div>`;
+
+  if(lista.length === 0){
+    html += `<div class="painel"><div class="vazio"><b>Nada encontrado</b>Ajuste a busca.</div></div>`;
+    el.innerHTML = html; return;
+  }
+
+  html += '<div class="var-lista">';
+  lista.forEach(p => {
+    const pontos = p.pontos.map(x => {
+      const ehMin = x.preco === p.min && p.min !== p.max;
+      const ehMax = x.preco === p.max && p.min !== p.max;
+      return `<div class="var-ponto ${ehMin?'min':(ehMax?'max':'')}">
+        <div class="vp-merc"><span class="mseloi" style="background:${corMercado(x.mercado)}"></span>${esc(x.mercado)}</div>
+        <div class="vp-data">${esc(x.mes ? x.mes : _dataCurta(x.data))}</div>
+        <div class="vp-preco">${brl(x.preco)}</div>
+      </div>`;
+    }).join('<div class="var-seta">&rsaquo;</div>');
+
+    const subiu = p.varAbs > 0.001, caiu = p.varAbs < -0.001;
+    const veredito = subiu
+      ? `<span class="var-tag sobe">▲ subiu ${brl(p.varAbs)} (${p.varPct.toFixed(0)}%)</span>`
+      : caiu ? `<span class="var-tag desce">▼ caiu ${brl(-p.varAbs)} (${Math.abs(p.varPct).toFixed(0)}%)</span>`
+      : `<span class="var-tag igual">sem mudanca no total</span>`;
+    const spreadTxt = p.spread > 0.001
+      ? `menor ${brl(p.min)} (${esc(p.menor.mercado)}, ${esc(p.menor.mes||_dataCurta(p.menor.data))}) &middot; maior ${brl(p.max)}`
+      : `mesmo preco nas ${p.nCompras} compras`;
+
+    html += `
+      <div class="var-item">
+        <div class="var-topo">
+          <div class="var-nome">${esc(p.nome)}<span class="comp-cat">${esc(p.cat)}</span></div>
+          ${veredito}
+        </div>
+        <div class="var-linha">${pontos}</div>
+        <div class="var-rodape">1a compra ${brl(p.primeiro.preco)} &rarr; ultima ${brl(p.ultimo.preco)} &middot; ${spreadTxt}</div>
+      </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 function renderComparador(){
